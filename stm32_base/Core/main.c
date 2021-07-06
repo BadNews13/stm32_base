@@ -17,12 +17,17 @@
 #include <rtos.h>
 #include <mirf.h>
 
+#include "protocol.h"
+
+#include "parsing.h"
+
 void RCC_DeInit(void);			//	сбрасывает настройки тактирования
 void SetSysClockTo72(void);		//	настраивает новое тактирование
 void GPIO_Init (void);			//	настраивает входы выходы
 
 
 void write_INIT_RTOS_in_lcd(void);
+void send_byte_to_uart(void);
 
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
@@ -38,14 +43,14 @@ int main(void)
 	SysTick_Init();		//	запуск системного таймера (для функции delay_ms())
 	LCD_init();
 	uart1_init (9600);
-	uart2_init (9600);
-	uart3_init (9600);
+	uart2_init (4800);
+//	uart3_init (9600);
 
 	RTOS_Init();						//	запускает RTOS
 	RTOS_SetTask(write_INIT_RTOS_in_lcd, 3000, 0);		// для теста (через ~10 секунд включится светодиод на отладочной плате)
 	RTOS_DeleteTask(write_INIT_RTOS_in_lcd);
 
-
+//	NRF_Init();
 
 
 /*
@@ -57,35 +62,55 @@ int main(void)
 	//===========================================================================================================================
 */
 
-	uint8_t message[5] = {0x71, 0x02, 0x03, 0x04, 0x05};		//	тестовое сообщение
 
-	NRF_Init();
-
-
-
-
-
-		uint8_t Stage = 0;
+	//============== Настройка вывода TX (PB10) =================================================================================
+		uint8_t offset =  (USART3_TX_pin - 8) * 4;				//	(10-8) * 4 = 8
+		GPIOB->CRH &= ~( GPIO_BITS_MASK << offset );	//
+		GPIOB->CRH |= ( OUTPUT_PUSH_PULL << offset );		//	альтернативная функция с выходом пуш-пул	AF_PUSH_PULL
+	//===========================================================================================================================
 
 
+		RTOS_SetTask(send_byte_to_uart, 1000, 0);
+
+	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
+
+	 uint8_t position = uart2_rx_buf_size;
+	 put_byte_UART1(RS232_address);
 
 	while(1)
 	{
-		/*
-		put_byte_UART1(0xD1);
-		put_byte_UART2(0xD2);
-		put_byte_UART3(0xD3);
-		delay_ms(500);
-		GPIOC->BSRR = ( 1 << 13 );				//	установка линии в 1
-		delay_ms(500);
-		GPIOC->BRR = ( 1 << 13 );				//	установка линии в 0
-		*/
-
-		delay_ms(1000);
 
 
+/*
+		switch (CURRENT_ACTION)
+		{
+			case DO_PARSING_CMD:	{parsing_soft_uart_RX();}	break;	//	искать пакет от ПК
+			case DO_CMD_EXE:		{pack_RS232_exe();}			break;	//	выполнить пакет от ПК
+			case DO_PARSING_ACK:	{parsing_uart_RX();}		break;	//	искать пакет от подчиненного
+			case DO_ACK_EXE:		{pack_RS485_exe();}			break;	//	выполнить пакет от подчиненого
 
-//		RTOS_DispatchTask();	// обязательно крутиться тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
+			case DO_PARKING_SPACE:	{parking_space();}			break;
+		}
+*/
+//	delay_ms(100);
+
+//		for (uint8_t i = 0; i < uart2_rx_buf_size; i++)	{put_byte_UART1(uart2_rx_buf[i]);}
+//		Parking_Space();
+
+		RTOS_DispatchTask();	// обязательно крутиться тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
+	//	pack_exe();
+
+
+
+		if(find_pack_from())
+		{
+			for(uint8_t i = 0; i < pack_for_me[0]; i++)	{put_byte_UART1(pack_for_me[i]);}
+		}
+
+
+
+
+
 	}
 }
 
@@ -201,5 +226,14 @@ void GPIO_Init (void)
 		GPIOC->BSRR = ( 1 << LED_pin );				//	установка линии в 1
 		//GPIOC->BRR = ( 1 << LED_pin );				//	установка линии в 0
 	//==========================================================================================
+
+}
+void send_byte_to_uart(void)
+{
+	put_byte_UART1(0xD1);
+	put_byte_UART2(0xD2);
+//		put_byte_UART3(0xD3);
+
+	RTOS_SetTask(send_byte_to_uart, 1000, 0);
 
 }

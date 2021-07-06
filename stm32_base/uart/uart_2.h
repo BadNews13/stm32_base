@@ -11,6 +11,8 @@
 //#include "stm32f10x.h"
 #include <global_defines.h>
 
+volatile uint8_t uart2_fl_rx;
+
 #define	USART2_TX_pin	2
 #define	USART2_RX_pin	3
 

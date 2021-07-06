@@ -73,7 +73,7 @@ void USART2_IRQHandler(void)
 void uart2_dmaRX_init(void)
 {
 	//RX
-	CLEAR_BIT	(DMA1_Channel6->CCR, DMA_CCR6_DIR | DMA_CCR5_MEM2MEM);		//	Set transfer direction (Peripheral to Memory)
+	CLEAR_BIT	(DMA1_Channel6->CCR, DMA_CCR6_DIR | DMA_CCR6_MEM2MEM);		//	Set transfer direction (Peripheral to Memory)
 	CLEAR_BIT	(DMA1_Channel6->CCR, DMA_CCR6_PL); 							//	Set priority level
 	SET_BIT		(DMA1_Channel6->CCR, DMA_CCR6_CIRC);						//	Transfer mode: circular
 	CLEAR_BIT	(DMA1_Channel6->CCR, DMA_CCR6_PINC);						//	Set peripheral no increment mode
@@ -135,9 +135,17 @@ void DMA1_Channel6_IRQHandler(void)	//	закончился прием от ПК
 {
 //	GPIOB->BRR = ( 1 << 10 );							//	установка линии TX3 в 1 (диод не светится)
 //	GPIOA->BRR = ( 1 << 2 );		// установка линии в 0 (диод светится)	//	включиться только после пересылки настроенного количества байт
+	static uint8_t trigger = 0;
+
+	if (trigger)	{GPIOB->BSRR = ( 1 << 10 ); trigger = 0;}		// установка линии в 1
+	else			{GPIOB->BRR = ( 1 << 10 ); 	trigger = 1;}		// установка линии в 0
+
+
 	if(READ_BIT(DMA1->ISR, DMA_ISR_TCIF6) == (DMA_ISR_TCIF6)) // если поднят флаг - завершена пересылка
 	{
 		WRITE_REG(DMA1->IFCR, DMA_IFCR_CTCIF6);					//	сбрасывем флаг записываю в него 1
+
+		uart2_fl_rx = 1;
 	}
 	else if(READ_BIT(DMA1->ISR, DMA_ISR_TEIF6) == (DMA_ISR_TEIF6))	//	если поднят бит - ошибка передачи
 	{

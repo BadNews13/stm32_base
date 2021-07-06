@@ -95,7 +95,7 @@ void uart1_dmaRX_init(void)
 	SET_BIT		(DMA1_Channel5->CCR, DMA_CCR5_TEIE);		//	Enable Channel 5 Transfer error interrupt
 
 
-	MODIFY_REG	(DMA1_Channel5->CNDTR, DMA_CNDTR5_NDT, uart1_rx_buf_size);	//	Set Number of data to transfer
+	MODIFY_REG	(DMA1_Channel5->CNDTR, DMA_CNDTR5_NDT, 1);	//	Set Number of data to transfer
 	SET_BIT		(DMA1_Channel5->CCR, DMA_CCR5_EN);			//	Enable DMA channel 5	//	включаем rx канал
 
 	NVIC_EnableIRQ(DMA1_Channel5_IRQn);						//	DMA1_Channel5_IRQn interrupt init
@@ -134,10 +134,12 @@ void uart1_dmaTX_init(void)
 
 void DMA1_Channel5_IRQHandler(void)	//	закончился прием от ПК (RX)
 {
-//	GPIOA->BRR = ( 1 << 2 );		// установка линии в 0 (диод светится)	//	включиться только после пересылки настроенного количества байт
-	if(READ_BIT(DMA1->ISR, DMA_ISR_TCIF5) == (DMA_ISR_TCIF5)) // если поднят флаг - завершена пересылка
+//	GPIOB->BRR = ( 1 << 10 );										// установка линии в 0 (диод светится)	//	включиться только после пересылки настроенного количества байт
+
+	if(READ_BIT(DMA1->ISR, DMA_ISR_TCIF5) == (DMA_ISR_TCIF5)) 	// если поднят флаг - завершена пересылка
 	{
 		WRITE_REG(DMA1->IFCR, DMA_IFCR_CTCIF5);					//	сбрасывем флаг записываю в него 1
+		uart1_fl_rx = 1;
 	}
 	else if(READ_BIT(DMA1->ISR, DMA_ISR_TEIF5) == (DMA_ISR_TEIF5))	//	если поднят бит - ошибка передачи
 	{
