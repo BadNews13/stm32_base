@@ -144,8 +144,6 @@ void DMA1_Channel6_IRQHandler(void)	//	закончился прием от ПК
 	if(READ_BIT(DMA1->ISR, DMA_ISR_TCIF6) == (DMA_ISR_TCIF6)) // если поднят флаг - завершена пересылка
 	{
 		WRITE_REG(DMA1->IFCR, DMA_IFCR_CTCIF6);					//	сбрасывем флаг записываю в него 1
-
-		uart2_fl_rx = 1;
 	}
 	else if(READ_BIT(DMA1->ISR, DMA_ISR_TEIF6) == (DMA_ISR_TEIF6))	//	если поднят бит - ошибка передачи
 	{

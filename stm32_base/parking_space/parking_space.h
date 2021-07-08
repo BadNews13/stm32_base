@@ -17,9 +17,12 @@ void Parking_Space_Init (void);
 void Parking_Space (void);
 void trigger (void);
 
+/*
 volatile uint8_t WAIT_ACK_TIME_OUT = 0;
 volatile uint8_t CURRENT_ACTION = 0;
-
+*/
+volatile uint8_t WAIT_ACK_TIME_OUT;
+volatile uint8_t CURRENT_ACTION;
 
 
 
@@ -39,15 +42,15 @@ uint8_t rx_pack[MAX_PACK_LENGTH];		//	пакет приходящий из по�
 
 			
 volatile uint8_t Parking_Space_CONTROL;		
-			#define		Parking_Space_AUTO		0	//	Запустить автоновную работу системы
-			#define		DO_PARSING_CMD			1	// Действие: искать команду
-			#define		DO_CMD_EXE				2	// Действие: обработать команду
-			#define		DO_PARSING_ACK			3	// Действие: искать ответ
-			#define		DO_ACK_EXE				4	// Действие: обработать ответ
-			#define		DO_PARKING_SPACE		5	// Действие: работа системы навигации
+			#define		DO_PARSING_CMD			1	// 	Действие: искать команду
+			#define		DO_CMD_EXE				2	// 	Действие: обработать команду
+			#define		DO_PARSING_ACK			3	// 	Действие: искать ответ
+			#define		DO_ACK_EXE				4	// 	Действие: обработать ответ
+			#define		DO_PARKING_SPACE		5	// 	Действие: работа системы навигации
 
 
 volatile uint8_t Parking_Space_STATUS;
+			#define		Parking_Space_AUTO		0	//	Запустить автоновную работу системы
 			#define		check_CMD				1	//	Статус: необходимо проверить команду
 			#define		CMD_ready				2	//	Статус: ожидание обработки команды
 			#define		waiting_ACK				3	//	Статус: ожидание ответа

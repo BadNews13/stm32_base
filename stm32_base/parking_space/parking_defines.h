@@ -40,5 +40,7 @@ uint8_t used_network;
 #define MIRF		0x03
 #define OUTPUT		0x03
 
+#define UART_1		0x01
+#define UART_2		0x02
 
 #endif /* PARKING_DEFINES_H_ */

@@ -12,10 +12,13 @@
 //#include "cmd_interp.h"
 #include <rtos.h>
 #include <uart_1.h>
+#include <uart_1_parsing.h>
 #include <uart_2.h>
+#include <uart_2_parsing.h>
 //#include <uart_3.h>
 #include "crc8.h"
 #include <delay_ms.h>
+
 
 
 
@@ -71,17 +74,24 @@ void give_addess (uint8_t dev_type)
 
 void rebuild_for_resend (uint8_t *pack)
 {
-	// ��������� �� ������� �������������� � ������ ������������������ �� ��������� ������� ��� ����������� �� ����������� ���������
-	for (uint8_t i = BYTE_RECEIVER_ADR; i<BYTE_SENDER_ADR; i++)		{pack[i] = pack[i+1];}						//	������� ������
-		
-	//		���� �������� ������				���		����� ���� ACK ������									//	�� ���� �����
-	if (	pack[BYTE_RECEIVER_ADR] == MASTER	||		bit_is_set(pack[BYTE_FLAGS],CMD_FLAGS_ACK_FLAG)		)	
-	{pack[BYTE_SENDER_ADR] = RS232_address;}																	//	��������� ���� ����� � ���� �������, ����� ��������� �����
+//	put_byte_UART2(pack[0]);
+
+//	for(uint8_t i = 0; i < 12; i++)		{put_byte_UART2(pack[i]);}
+
+//	for (uint8_t i = BYTE_RECEIVER_ADR; i<BYTE_SENDER_ADR; i++)		{pack[i] = pack[i+1];}						//	сдвинем адреса
+
+
+	// пересылка по адресам осуществляется в прямой последовательности по указанным адресам вне зависимости от направления пересылки
+	for (uint8_t i = BYTE_RECEIVER_ADR; i<BYTE_SENDER_ADR; i++)		{pack[i] = pack[i+1];}						//	сдвинем адреса
+
+	//		если получает мастер				или		стоит флаг ACK пакета									//	то шлем вверх
+	if (	pack[BYTE_RECEIVER_ADR] == MASTER	||		READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG))		)
+	{pack[BYTE_SENDER_ADR] = adr_in_uart_1;}																	//	вставляем свой адрес в сети мастера, чтобы отправить вверх
 	
-	//		���� ����������� ������		 		���		�� ����� ���� ACK ������								//	�� ���� ����
-	if (	pack[BYTE_SENDER_ADR] == MASTER		||		!bit_is_set(pack[BYTE_FLAGS],CMD_FLAGS_ACK_FLAG)	)	
+	//		если отправитель мастер		 		или		не стоит флаг ACK пакета								//	то шлем вниз
+	if (	pack[BYTE_SENDER_ADR] == MASTER		||		!READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG))	)
 	{
-		pack[BYTE_SENDER_ADR] = MASTER;																			//	��������� ����� �������, ����� ��������� ����
+		pack[BYTE_SENDER_ADR] = MASTER;																			//	вставляем адрес мастера, чтобы отправить вниз
 		CURRENT_COUNT_PACK = pack[BYTE_COUNT_PACK];
 		CURRENT_DEVICE = pack[BYTE_RECEIVER_ADR];
 	}
@@ -93,6 +103,9 @@ void rebuild_for_resend (uint8_t *pack)
 
 void time_out_ACK (void)
 {	
+	put_byte_UART1(0x99);
+	Parking_Space_CONTROL = DO_PARSING_CMD;
+
 	WAIT_ACK_TIME_OUT = 0;
 	
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
@@ -248,16 +261,21 @@ void give_cmd_status (void)
 	
 void Parking_Space(void)
 {
-//	SET_BIT(STATUS_PS,check_CMD);
+	Parking_Space_CONTROL = DO_PARSING_CMD;	//	по умолчанию перейдем в поиск команды от верхней сети
+
 	if (READ_BIT(Parking_Space_STATUS,(1<<waiting_ACK)))	{return;}					//	если ждем ACK, то выходим
-		
-	if ((!READ_BIT(Parking_Space_CONTROL, (1<<Parking_Space_AUTO))))	{return;}		//	если не в режиме AUTO, то вы ходим
+
+	put_byte_UART1(0xC4);
+
+	if ((!READ_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO))))	{return;}		//	если не в режиме AUTO, то вы ходим
 	
 	static uint8_t ATTEMPTS = 0;
 	
 	creat_pack();								//	собираем основу пакета
 	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;		//	ставим время ACK
 	
+	put_byte_UART1(0xC5);
+
 	switch(PARKING_STAGE)
 	{
 		case SEARCH:		//	этап поиска	(любого) устройства
@@ -370,8 +388,8 @@ void put_tx_pack (void)
 {
 	tx_pack[BYTE_COUNT_PACK] = ++CURRENT_COUNT_PACK;
 	tx_pack[tx_pack[BYTE_LEN]-1] =	crc8(&tx_pack[0],tx_pack[BYTE_LEN]-1);		//	11/12 byte:	посчитать и записать crc в пакет
-	for (uint8_t i = 0; i< tx_pack[BYTE_LEN]; i++)		{put_byte_UART2(tx_pack[i]);}
-	SET_BIT(Parking_Space_STATUS,(1<<waiting_ACK));			//	поднимаем флаг - ожидание ACK
+	for (uint8_t i = 0; i < tx_pack[BYTE_LEN]; i++)		{put_byte_UART2(tx_pack[i]);}
+	SET_BIT(Parking_Space_STATUS,(1<<waiting_ACK));		//	поднимаем флаг - ожидание ACK
 	WAIT_ACK_TIME_OUT = 1;								//	для кастыля, т.к. STATUS_MK,waiting_ACK произвольно поднимается
 	RTOS_SetTask(time_out_ACK,TIME_FOR_TIME_OUT_ACK,0);	//	время на получение всех пакетов (настроить ограничение максимального времени ожидания на датчиках)
 }
@@ -405,8 +423,9 @@ void Parking_Space_Init (void)
 		Parking_Space_STATUS = 0;
 		Parking_Space_CONTROL = 0;
 
-		SET_BIT(Parking_Space_CONTROL, (1<<Parking_Space_AUTO));
+		SET_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO));
 
+		PARKING_STAGE = SEARCH;
 
 }
 

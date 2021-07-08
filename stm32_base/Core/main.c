@@ -23,6 +23,8 @@
 #include <mirf.h>
 
 #include "protocol.h"
+#include "parking_space.h"
+
 
 
 void RCC_DeInit(void);			//	сбрасывает настройки тактирования
@@ -52,10 +54,10 @@ int main(void)
 
 	RTOS_Init();						//	запускает RTOS
 	RTOS_SetTask(write_INIT_RTOS_in_lcd, 3000, 0);		// для теста (через ~10 секунд включится светодиод на отладочной плате)
-	RTOS_DeleteTask(write_INIT_RTOS_in_lcd);
+//	RTOS_DeleteTask(write_INIT_RTOS_in_lcd);
 
 //	NRF_Init();
-
+//	RTOS_SetTask(time_out_ACK,300,0);
 
 /*
 //	Для светодиода на плате
@@ -74,38 +76,42 @@ int main(void)
 	//===========================================================================================================================
 
 
-	RTOS_SetTask(send_byte_to_uart, 1000, 0);
+//	RTOS_SetTask(send_byte_to_uart, 1000, 0);
+/*
 	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
+	adr_in_uart_1 = 7;
+	adr_in_uart_2 = 9;
 
-	 put_byte_UART1(adr_in_uart_1);
-	 put_byte_UART2(adr_in_uart_2);
+	put_byte_UART1(adr_in_uart_1);
+	put_byte_UART2(adr_in_uart_2);
 
-
+	Parking_Space_CONTROL = DO_PARSING_CMD;
+*/
 	while(1)
 	{
 
-
-/*
-		switch (CURRENT_ACTION)
+/*		switch (Parking_Space_CONTROL)
 		{
-			case DO_PARSING_CMD:	{parsing_soft_uart_RX();}	break;	//	искать пакет от ПК
-			case DO_CMD_EXE:		{pack_RS232_exe();}			break;	//	выполнить пакет от ПК
-			case DO_PARSING_ACK:	{parsing_uart_RX();}		break;	//	искать пакет от подчиненного
-			case DO_ACK_EXE:		{pack_RS485_exe();}			break;	//	выполнить пакет от подчиненого
+			case DO_PARSING_CMD:	{find_pack_from_uart_1();}	break;	//	искать пакет от ПК
+			case DO_CMD_EXE:		{pack_from_uart_1_exe();}	break;	//	выполнить пакет от ПК
+			case DO_PARSING_ACK:	{find_pack_from_uart_2();}	break;	//	искать пакет от подчиненного
+//			case DO_ACK_EXE:		{pack_RS485_exe();}			break;	//	выполнить пакет от подчиненого
 
-			case DO_PARKING_SPACE:	{parking_space();}			break;
+			case DO_PARKING_SPACE:	{Parking_Space();}			break;
 		}
 */
-//	delay_ms(100);
+
+
+//		delay_ms(100);
 
 //		for (uint8_t i = 0; i < uart2_rx_buf_size; i++)	{put_byte_UART1(uart2_rx_buf[i]);}
 //		Parking_Space();
 
 //		RTOS_DispatchTask();	// обязательно крутиться тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
-	//	pack_exe();
+//		pack_exe();
 
-
+/*
 		if(find_pack_from_uart_2())
 		{
 			for(uint8_t i = 0; i < pack_for_me_from_uart_2[0]; i++)		{put_byte_UART1(pack_for_me_from_uart_2[i]);}
@@ -114,8 +120,9 @@ int main(void)
 		if(find_pack_from_uart_1())
 		{
 			for(uint8_t i = 0; i < pack_for_me_from_uart_1[0]; i++)		{put_byte_UART2(pack_for_me_from_uart_1[i]);}
+			pack_from_uart_1_exe();
 		}
-
+*/
 
 	}
 }
