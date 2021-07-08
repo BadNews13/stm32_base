@@ -1,27 +1,28 @@
 /*
- * parsing.h
+ * uart_2_parsing.h
  *
- *  Created on: 6 июл. 2021 г.
+ *  Created on: 8 июл. 2021 г.
  *      Author: bad_n
  */
 
-#ifndef PARSING_H_
-#define PARSING_H_
+#ifndef UART_2_PARSING_H_
+#define UART_2_PARSING_H_
 
 #include <uart_2.h>
+#include <protocol.h>
 #include <global_defines.h>
-//#include <parking_defines.h>
 #include <crc8.h>
 
 
-uint8_t find_pack_from (void);
+uint8_t find_pack_from_uart_2 (void);
+
+adr_in_uart_2 = 9;
+
+uint8_t pack_for_me_from_uart_2[128];
 
 
-uint8_t pack_for_me[128];
 
-
-
-uint8_t find_pack_from (void)
+uint8_t find_pack_from_uart_2 (void)
 {
 	//	for cycle and start from zero index
 	static uint8_t start_position = 0xFF;
@@ -53,7 +54,7 @@ uint8_t find_pack_from (void)
 	if (uart2_rx_buf[byte_LENGTH_index] < MIN_PACK_LENGTH)					{return 0;}
 
 	//	check receiver address
-	if (uart2_rx_buf[byte_RECEIVER_index] != RS232_address)					{return 0;}
+	if (uart2_rx_buf[byte_RECEIVER_index] != adr_in_uart_2)					{return 0;}
 
 	//	check "flag_pack" in flags
 	if (!(READ_BIT(uart2_rx_buf[byte_FLAGS_index], (1<<CMD_FLAGS_PACK))))	{return 0;}
@@ -85,19 +86,17 @@ uint8_t find_pack_from (void)
 	{
 		if(i + start_position < uart2_rx_buf_size)
 		{
-			pack_for_me[i] = 	uart2_rx_buf[i + start_position];
-								uart2_rx_buf[i + start_position] 	= 0x00;
+			pack_for_me_from_uart_2[i] = 	uart2_rx_buf[i + start_position];
+											uart2_rx_buf[i + start_position] 	= 0x00;
 		}
 		else
 		{
-			pack_for_me[i] =	uart2_rx_buf[i - uart2_rx_buf_size + start_position];
-								uart2_rx_buf[i - uart2_rx_buf_size + start_position]	= 0x00;
+			pack_for_me_from_uart_2[i] =		uart2_rx_buf[i - uart2_rx_buf_size + start_position];
+												uart2_rx_buf[i - uart2_rx_buf_size + start_position]	= 0x00;
 		}
 	}
 	return 1;
 
 }
 
-
-
-#endif /* PARSING_H_ */
+#endif /* UART_2_PARSING_H_ */

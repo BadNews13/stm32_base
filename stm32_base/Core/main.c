@@ -10,8 +10,13 @@
 
 #include <global_defines.h>
 #include <delay_ms.h>
+
 #include <uart_1.h>
+#include <uart_1_parsing.h>
+
 #include <uart_2.h>
+#include <uart_2_parsing.h>
+
 #include <uart_3.h>
 #include <lcd.h>
 #include <rtos.h>
@@ -19,7 +24,6 @@
 
 #include "protocol.h"
 
-#include "parsing.h"
 
 void RCC_DeInit(void);			//	сбрасывает настройки тактирования
 void SetSysClockTo72(void);		//	настраивает новое тактирование
@@ -70,28 +74,13 @@ int main(void)
 	//===========================================================================================================================
 
 
-		RTOS_SetTask(send_byte_to_uart, 1000, 0);
-
+	RTOS_SetTask(send_byte_to_uart, 1000, 0);
 	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
-	 uint8_t position = uart2_rx_buf_size;
-	 put_byte_UART1(RS232_address);
 
-/*
-	 uart2_rx_buf[0] = 0x01;
-	 uart2_rx_buf[1] = 0x01;
-	 uart2_rx_buf[2] = 0x01;
-	 uart2_rx_buf[3] = 0x21;	//	comand
-	 uart2_rx_buf[4] = 0x00;	//	param
-	 uart2_rx_buf[5] = 0xB2;	//	crc
-	 for (uint8_t i = 6; i < 23; i++)	{put_byte_UART1(0x00);}
-	 uart2_rx_buf[24] = 0x0C;	//	длина
-	 uart2_rx_buf[25] = 0x09;	//	получатель
-	 uart2_rx_buf[26] = 0x00;
-	 uart2_rx_buf[27] = 0x00;
-	 uart2_rx_buf[28] = 0x00;
-	 uart2_rx_buf[29] = 0x01;	//	отправитель
-*/
+	 put_byte_UART1(adr_in_uart_1);
+	 put_byte_UART2(adr_in_uart_2);
+
 
 	while(1)
 	{
@@ -117,9 +106,14 @@ int main(void)
 	//	pack_exe();
 
 
-		if(find_pack_from())
+		if(find_pack_from_uart_2())
 		{
-			for(uint8_t i = 0; i < pack_for_me[0]; i++)		{put_byte_UART1(pack_for_me[i]);}
+			for(uint8_t i = 0; i < pack_for_me_from_uart_2[0]; i++)		{put_byte_UART1(pack_for_me_from_uart_2[i]);}
+		}
+
+		if(find_pack_from_uart_1())
+		{
+			for(uint8_t i = 0; i < pack_for_me_from_uart_1[0]; i++)		{put_byte_UART2(pack_for_me_from_uart_1[i]);}
 		}
 
 

@@ -95,7 +95,7 @@ void uart1_dmaRX_init(void)
 	SET_BIT		(DMA1_Channel5->CCR, DMA_CCR5_TEIE);		//	Enable Channel 5 Transfer error interrupt
 
 
-	MODIFY_REG	(DMA1_Channel5->CNDTR, DMA_CNDTR5_NDT, 1);	//	Set Number of data to transfer
+	MODIFY_REG	(DMA1_Channel5->CNDTR, DMA_CNDTR5_NDT, uart1_rx_buf_size);	//	Set Number of data to transfer
 	SET_BIT		(DMA1_Channel5->CCR, DMA_CCR5_EN);			//	Enable DMA channel 5	//	включаем rx канал
 
 	NVIC_EnableIRQ(DMA1_Channel5_IRQn);						//	DMA1_Channel5_IRQn interrupt init
