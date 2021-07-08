@@ -77,6 +77,22 @@ int main(void)
 	 uint8_t position = uart2_rx_buf_size;
 	 put_byte_UART1(RS232_address);
 
+/*
+	 uart2_rx_buf[0] = 0x01;
+	 uart2_rx_buf[1] = 0x01;
+	 uart2_rx_buf[2] = 0x01;
+	 uart2_rx_buf[3] = 0x21;	//	comand
+	 uart2_rx_buf[4] = 0x00;	//	param
+	 uart2_rx_buf[5] = 0xB2;	//	crc
+	 for (uint8_t i = 6; i < 23; i++)	{put_byte_UART1(0x00);}
+	 uart2_rx_buf[24] = 0x0C;	//	длина
+	 uart2_rx_buf[25] = 0x09;	//	получатель
+	 uart2_rx_buf[26] = 0x00;
+	 uart2_rx_buf[27] = 0x00;
+	 uart2_rx_buf[28] = 0x00;
+	 uart2_rx_buf[29] = 0x01;	//	отправитель
+*/
+
 	while(1)
 	{
 
@@ -97,18 +113,14 @@ int main(void)
 //		for (uint8_t i = 0; i < uart2_rx_buf_size; i++)	{put_byte_UART1(uart2_rx_buf[i]);}
 //		Parking_Space();
 
-		RTOS_DispatchTask();	// обязательно крутиться тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
+//		RTOS_DispatchTask();	// обязательно крутиться тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
 	//	pack_exe();
-
 
 
 		if(find_pack_from())
 		{
-			for(uint8_t i = 0; i < pack_for_me[0]; i++)	{put_byte_UART1(pack_for_me[i]);}
+			for(uint8_t i = 0; i < pack_for_me[0]; i++)		{put_byte_UART1(pack_for_me[i]);}
 		}
-
-
-
 
 
 	}

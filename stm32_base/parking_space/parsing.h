@@ -8,11 +8,9 @@
 #ifndef PARSING_H_
 #define PARSING_H_
 
-#include <uart_1.h>
 #include <uart_2.h>
-#include <uart_3.h>
 #include <global_defines.h>
-#include <parking_defines.h>
+//#include <parking_defines.h>
 #include <crc8.h>
 
 
@@ -61,14 +59,31 @@ uint8_t find_pack_from (void)
 	if (!(READ_BIT(uart2_rx_buf[byte_FLAGS_index], (1<<CMD_FLAGS_PACK))))	{return 0;}
 
 	//	check crc
-	if(	uart2_rx_buf[byte_CRC_index] != crc8(&uart2_rx_buf[start_position],uart2_rx_buf[byte_LENGTH_index]-1))	{return 0;}
+	if (start_position + uart2_rx_buf[byte_LENGTH_index] > uart2_rx_buf_size)
+	{
+		uint8_t crc = 0;
+
+		uint8_t first_part_cnt = 	uart2_rx_buf_size 				- start_position		;	//	количество байт до конца буфера (до перехода)
+		uint8_t second_part_cnt = 	uart2_rx_buf[byte_LENGTH_index] - first_part_cnt	-1	;	//	количество байт вначале буфера (после перехода)
+
+		crc = 	crc8_parts(	0,		&uart2_rx_buf[start_position],	first_part_cnt	);
+		crc = 	crc8_parts(	crc,	&uart2_rx_buf[0],				second_part_cnt	);
+
+		if(uart2_rx_buf[byte_CRC_index] != crc) {return 0;}
+	}
+	else
+	{
+		if(	uart2_rx_buf[byte_CRC_index] != crc8(&uart2_rx_buf[start_position],uart2_rx_buf[byte_LENGTH_index]-1))	{return 0;}
+	}
+
+
 
 //====================================================================================================
 
 	uint8_t size = uart2_rx_buf[byte_LENGTH_index];
 	for (uint8_t i = 0; i < size; i++)
 	{
-		if(i + start_position <= uart2_rx_buf_size)
+		if(i + start_position < uart2_rx_buf_size)
 		{
 			pack_for_me[i] = 	uart2_rx_buf[i + start_position];
 								uart2_rx_buf[i + start_position] 	= 0x00;
@@ -82,7 +97,6 @@ uint8_t find_pack_from (void)
 	return 1;
 
 }
-
 
 
 
