@@ -8,21 +8,17 @@
 #ifndef CMD_INTERP_H_
 #define CMD_INTERP_H_
 
-#include <global_defines.h>
-
 #include <uart_2.h>
 
 void pack_exe(void);
 
 
 
+void pack_from_uart_1_exe (void);		//	обрабтать пакет из сети 1
+void pack_from_uart_2_exe (void);		//	обрабтать пакет из сети 2
 
-
-uint8_t check_hop(uint8_t from_NET);
-
-void pack_from_uart_1_exe (void);
-
-void prepare_ACK (void);
+uint8_t check_hop(uint8_t from_NET);	//	проверяет нужно ли пересылать дальше пакет или обрабатываем
+void prepare_ACK (void);				//	готови ACK
 
 //для пришедших пакетов (чтобы понять что с ним делать)
 #define	our_ACK				0x00	//	ответный пакет для нас

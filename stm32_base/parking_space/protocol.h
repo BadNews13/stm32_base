@@ -9,7 +9,7 @@
 #ifndef PROTOCOL_H_
 #define PROTOCOL_H_
 
-#include "parking_defines.h"
+
 
 #define PACK_HEADER_LENGTH          8			//	длина заголовка пакета (после идет команда, параметр, данные и crc)
 #define MAX_PACK_LENGTH             128

@@ -13,7 +13,11 @@ uint8_t find_pack_from_uart_1 (void)
 {
 //	adr_in_uart_1 = 8;
 
-	Parking_Space_CONTROL = DO_PARKING_SPACE;		//	по умолчанию после функции переходим к работе системы Parking_space
+	if( READ_BIT(Parking_Space_STATUS,(1<<waiting_ACK)) ) 	{Parking_Space_CONTROL = DO_PARSING_ACK;}		//	если ждем ACK, то в случае отстутсвия команды перейдем поиску ACK
+	else													{Parking_Space_CONTROL = DO_PARKING_SPACE;}		//	по умолчанию после функции переходим к работе системы Parking_space
+
+//	Parking_Space_CONTROL = DO_PARKING_SPACE;		//	по умолчанию после функции переходим к работе системы Parking_space
+
 
 	for(uint8_t i = 0; i < uart1_rx_buf_size; i++) 		{pack_for_me_from_uart_1[i] = 0x00;}
 

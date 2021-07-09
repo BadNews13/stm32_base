@@ -13,10 +13,12 @@
 #include <uart_2_parsing.h>
 
 
-#include "parking_space.h"
+#include <parking_space.h>
 #include "global_defines.h"
 
-#include "parking_defines.h"
+#include <lcd.h>
+
+#include "protocol.h"
 
 void pack_exe(void)
 {
@@ -39,16 +41,13 @@ void pack_exe(void)
 
 void pack_from_uart_1_exe (void)
 {
-	Parking_Space_CONTROL = DO_PARKING_SPACE;
-	//	SET_BIT(Parking_Space_STATUS,check_CMD);	CLEAR_BIT(Parking_Space_STATUS,CMD_ready);
+	Parking_Space_CONTROL = DO_PARKING_SPACE;		//	по умолчанию после функции переходим к работе системы Parking_space
 
 	uint8_t *pack = &pack_for_me_from_uart_1[0];
 
 	uint8_t command =		pack[BYTE_COMMAND];
 	uint8_t parameter =		pack[BYTE_PARAMETER];
-//	uint8_t data =			pack[BYTE_DATA_OFFSET];
-
-	uint8_t* p_data =		&pack[BYTE_DATA_OFFSET];
+	uint8_t *p_data =		&pack[BYTE_DATA_OFFSET];
 
 	switch (check_hop(UART_1))			//	узнаем что надо делать с пакетом
 	{
@@ -57,15 +56,16 @@ void pack_from_uart_1_exe (void)
 			rebuild_for_resend(&pack[0]);		//	пересоберем пакет для отправки вниз
 			pack[pack[BYTE_LEN]-1] =	crc8(&pack[0],pack[BYTE_LEN]-1);	//	11/12 byte:	посчитать и записать crc в пакет
 			for (uint8_t i = 0; i < pack[BYTE_LEN]; i++)	{put_byte_UART2(pack[i]);}			//	отправим пакет вниз
-			SET_BIT(Parking_Space_STATUS,(1<<waiting_ACK));
-//			WAIT_ACK_TIME_OUT = 1;
-			RTOS_SetTask(time_out_ACK,200,0);		//	запуск отсчета таймаута
+
+			Parking_Space_CONTROL = DO_PARSING_ACK;				//	ищем ACK
+			SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));
+			RTOS_SetTask(time_out_ACK,200,0);					//	запуск отсчета таймаута
+			//WAIT_ACK_TIME_OUT = 1;
 		}
 		break;
 
 		case our_pack:
 		{
-			put_byte_UART2(0xA6);
 			prepare_ACK();			//	подготовим ACK OUTPUT_pack с ошибкой в ответ на пакет из RS232
 			switch (command)		//	начинается разбор команд
 			{
@@ -73,13 +73,29 @@ void pack_from_uart_1_exe (void)
 				{
 					switch (parameter)
 					{
-						case PRM_START:	{Parking_Space_CONTROL = 0;}		break;
+						case PRM_START:
+						{
+							SET_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO));
+
+							//write_START
+							LCD_Command(0x01);		//	очистка дисплея					(LCD_CLEAR)
+							delay_ms(2);			//	долгая операция
+							LCD_Command(LCD_SETDDRAMADDR | 0);	//	писать с нулевого адреса
+							LCDsendString("Parking START");
+						}
+						break;
 
 						case PRM_STOP:
 						{
-							Parking_Space_CONTROL = 1;
-							//write_STOP();
+
+							CLEAR_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO));
 							prepare_ACK();	// т.к. массив один для всех исходящих пакетов, то после отправки сообщения на табло надо снова пересобрать ACK
+
+							//write_STOP
+							LCD_Command(0x01);		//	очистка дисплея					(LCD_CLEAR)
+							delay_ms(2);			//	долгая операция
+							LCD_Command(LCD_SETDDRAMADDR | 0);	//	писать с нулевого адреса
+							LCDsendString("Parking STOP");
 						}
 						break;
 
@@ -97,7 +113,7 @@ void pack_from_uart_1_exe (void)
 						case NO_PARAMETERS:
 						{
 						//	RS232_address = *p_data;
-							RS232_address = p_data[0];							//	запишем новоый адрес в рабочую переменную
+							adr_in_uart_1 = p_data[0];							//	запишем новоый адрес в рабочую переменную
 			//				eeprom_update_byte(EEPROM_ADR,RS232_address);		//	адрес в сети RS485 (основная рабочая сеть системы)
 						}
 						break;
@@ -254,6 +270,137 @@ void pack_from_uart_1_exe (void)
 
 
 
+
+void pack_from_uart_2_exe (void)
+{
+	Parking_Space_CONTROL = DO_PARSING_CMD;	//	по умолчанию перейдем в поиск команды от верхней сети
+
+//	sbit(STATUS_MK,check_CMD);	cbit(STATUS_MK,ACK_ready);	cbit(STATUS_MK,waiting_ACK);
+	RTOS_DeleteTask(time_out_ACK);					//	отменим вызов обработчика таймаута
+//	RTOS_SetTask(reset_uart_rx,4000,0);				//	перезапустим отложенные сброс uart
+
+	uint8_t *pack = &pack_for_me_from_uart_2[0];
+
+	uint8_t adr_dev_from_pack =		pack[BYTE_SENDER_ADR];
+	uint8_t count_from_pack =		pack[BYTE_COUNT_PACK];
+	uint8_t command =				pack[BYTE_COMMAND];
+	uint8_t parameter =				pack[BYTE_PARAMETER];
+//	uint8_t flags_from_pack =		pack[BYTE_FLAGS];
+	uint8_t data =					pack[BYTE_DATA_OFFSET];
+
+	switch (check_hop(UART_2))		//	узнаем что надо делать с пакетом
+	{
+		case hop_up:
+		{
+			rebuild_for_resend(&pack[0]);					//	пересоберем пакет для отправки вниз
+			pack[pack[BYTE_LEN]-1] =	crc8(&pack[0],pack[BYTE_LEN]-1);				//	11/12 byte:	посчитать и записать crc в пакет
+			for (uint8_t i = 0; i < pack[BYTE_LEN]; i++)	{put_byte_UART1(pack[i]);}	//	отправим пакет вверх
+		}
+		break;
+
+		case our_ACK:
+		{
+			set_device_as_live(CURRENT_DEVICE);
+
+			if(	(CURRENT_COUNT_PACK	== count_from_pack) &&		//	если это ответ на текущий, отправленный пакет
+				(CURRENT_DEVICE	== adr_dev_from_pack)		)	//	адрес датчика совпадет с тем дачтиком, с которым мы работатем (с тем кому отправили прошлый пакет)
+			{
+				switch (command)	//	в зависимости от команды на которую этот пакет является ответом (команда лежит в пришедшем пакете)
+				{
+					case CMD_STATUS:	//	контроллер просил состояние парковочного места?
+					{
+						switch (parameter)
+						{
+							case PRM_STATUS:	// ответ наданную команду обрабатывается по разному взависимости от того кто мы и кто нам на нее ответил
+							{
+								switch (I_am)							//	в зависимости от того кто - мы будем обрабатывать пакет
+								{
+									case HEAD:							//	если мы ГОЛОВА
+									{
+										switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства
+										{
+											case HEAD:		{}		break;	//	невозможное событие (другой головы не может быть)
+											case NODE:		{/**/}	break;	//	обрабатываем список статусов
+											case SENSOR:
+											{
+												switch (data)
+												{
+													case FREE:		{set_status_as_free(CURRENT_DEVICE);}	break;
+													case TAKEN:		{set_status_as_taken(CURRENT_DEVICE);}	break;
+													case unknown:	{}	break;
+												}
+											}
+											break;	//	обрабатываем единичное состояние одного датчика
+										}
+									}
+									break;
+
+
+									case NODE:							//	если мы УЗЕЛ
+									{
+										switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства, которое нам ответило
+										{
+											case HEAD:		{}		break;	//	невозможное событие (мы не можем командовать головой)
+											case NODE:		{}		break;	//	невозможное событие (мы не можем командовать другим узлом)
+											case SENSOR:					//	обрабатываем единичное состояние одного датчика
+											{
+												switch (data)
+												{
+													case FREE:		{set_status_as_free(adr_dev_from_pack);}		break;		//	пометить место как свободное
+													case TAKEN:		{set_status_as_taken(adr_dev_from_pack);}		break;		//	пометить место как занятое
+													case unknown:	{}												break;		//	состояние парковочного места неизвестно (возможно это экран)
+												}
+											}
+											break;
+										}
+									}
+									break;
+
+								}
+							}
+							break;
+						}
+					}
+					break;
+
+
+
+					case CMD_PING:
+					{
+						switch (parameter)
+						{
+							case PRM_NULL:	{COUNT_NULL_PACK++;}	break;
+							case PRM_PING:	{CURRENT_DEVICE_TYPE = pack[BYTE_DATA_OFFSET]; PARKING_STAGE = DEFINED;}	break;	//	сбросим бит ожидания типа
+							case PRM_BLINK: {}	break;	//	мы такое не генерируем
+						}
+					}
+					break;
+
+					case CMD_CONTROL:
+					{
+						switch (parameter)
+						{
+							case PRM_RESET:	{}	break;
+						}
+					}
+					break;
+
+					case CMD_WRITE_TEXT:	{break;}	//	контроллер выводил сообщение на led_panel?
+					//case CMD_RESET:			{cbit(DIAL_STAGE,hold_current_device);	break;}	//	контроллер перезагружал устройство?
+
+					case CMD_SET_ADR:		{PARKING_STAGE = DEFINED;} break;
+				}
+			}
+		}
+		break;
+
+		default:		{/*ERROR*/}							break;
+	}
+}
+
+
+
+
 uint8_t check_hop(uint8_t from_NET)					//	узнаем маршрут пакета и возвращаем метку для следующей функции обработки
 {
 //	put_byte_UART2(0xA1);put_byte_UART2(0xA1);put_byte_UART2(0xA1);
@@ -284,7 +431,7 @@ uint8_t check_hop(uint8_t from_NET)					//	узнаем маршрут паке�
 		case UART_2:
 		{
 			uint8_t *pack = &pack_for_me_from_uart_2[0];
-			if(	READ_BIT(pack[BYTE_FLAGS],CMD_FLAGS_PACK)	)				//	это вообще пакет?
+			if(	READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_PACK))	)				//	это вообще пакет?
 			{
 				if(READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG)))		//	пакет ACK?
 				{

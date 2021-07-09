@@ -5,12 +5,15 @@
  *      Author: bad_n
  */
 #include <uart_2_parsing.h>
+#include "parking_space.h"
 
 
 
 uint8_t find_pack_from_uart_2 (void)
 {
 //	adr_in_uart_2 = 9;
+
+	Parking_Space_CONTROL = DO_PARSING_CMD;	//	по умолчанию перейдем в поиск команды от верхней сети
 
 	//	for cycle and start from zero index
 	static uint8_t start_position = 0xFF;
@@ -66,7 +69,6 @@ uint8_t find_pack_from_uart_2 (void)
 	}
 
 
-
 //====================================================================================================
 
 	uint8_t size = uart2_rx_buf[byte_LENGTH_index];
@@ -83,6 +85,9 @@ uint8_t find_pack_from_uart_2 (void)
 												uart2_rx_buf[i - uart2_rx_buf_size + start_position]	= 0x00;
 		}
 	}
+
+	Parking_Space_CONTROL = DO_ACK_EXE;	//	если нашли команду, то переходим к ее обработке
+	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
 	return 1;
 
 }

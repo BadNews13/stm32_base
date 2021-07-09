@@ -19,7 +19,7 @@
 #include "crc8.h"
 #include <delay_ms.h>
 
-
+#include "lcd.h"
 
 
 uint16_t TIME_FOR_TIME_OUT_ACK = 100;	//	время ожидания ACK должно зависеть от команды
@@ -74,13 +74,6 @@ void give_addess (uint8_t dev_type)
 
 void rebuild_for_resend (uint8_t *pack)
 {
-//	put_byte_UART2(pack[0]);
-
-//	for(uint8_t i = 0; i < 12; i++)		{put_byte_UART2(pack[i]);}
-
-//	for (uint8_t i = BYTE_RECEIVER_ADR; i<BYTE_SENDER_ADR; i++)		{pack[i] = pack[i+1];}						//	сдвинем адреса
-
-
 	// пересылка по адресам осуществляется в прямой последовательности по указанным адресам вне зависимости от направления пересылки
 	for (uint8_t i = BYTE_RECEIVER_ADR; i<BYTE_SENDER_ADR; i++)		{pack[i] = pack[i+1];}						//	сдвинем адреса
 
@@ -103,13 +96,11 @@ void rebuild_for_resend (uint8_t *pack)
 
 void time_out_ACK (void)
 {	
-	put_byte_UART1(0x99);
-	Parking_Space_CONTROL = DO_PARSING_CMD;
-
-	WAIT_ACK_TIME_OUT = 0;
+//	put_byte_UART1(0x99);
+//	WAIT_ACK_TIME_OUT = 0;
 	
+	Parking_Space_CONTROL = DO_PARSING_CMD;					//	поднимаеим флаг - проверить CMD от PC
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
-//	SET_BIT		(Parking_Space_STATUS,(1<<check_CMD));		//	поднимаеим флаг - проверить CMD от PC
 
 	if (!(CURRENT_DEVICE == NONAME_DEVICE))	{PARKING_STAGE = RESTART;}
 	if (!tx_pack[BYTE_PREVIOUS_SENDER_ADR])	{set_device_as_dead(CURRENT_DEVICE);}	//	если отправленный пакет не имеет другого отправителя в своем адресе, то он наш => пометим устройство как мертвое
@@ -149,9 +140,8 @@ uint8_t free_address (uint8_t type_dev)
 
 void prepare_message_to_screen (void)
 {
-	
-	tx_pack[BYTE_COMMAND] = CMD_WRITE_TEXT;			//	���������� ������� - ������ ����� �����
-	tx_pack[BYTE_PARAMETER] = PRM_RED;		//	���������� �������� �������	- ��� ���������
+	tx_pack[BYTE_COMMAND] = CMD_WRITE_TEXT;			//	записываем команду - задать новый адрес
+	tx_pack[BYTE_PARAMETER] = PRM_RED;		//	записываем параметр команды	- без параметра
 	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;
 		
 	uint8_t	count_live_devices = 0;			uint8_t	count_free_places = 0;
@@ -159,24 +149,24 @@ void prepare_message_to_screen (void)
 	
 	for (uint8_t i = 2; i<MAX_DEVICES; i++)
 	{
-		if (i != CURRENT_DEVICE)							//	�������� �� ��� ����������� �� ������ ����� ��������, �.�. ������� - �����
+		if (i != CURRENT_DEVICE)							//	проходим по все устройствам из памяти кроме текущего, т.к. текущий - экран
 		{
 			if (sensor_is_live(i))
 			{
-				count_live_devices++;						//	������� ����� ��������� ���� � ������ ������
-				count_free_places += sensor_is_free(i);		//	������� �� ��� ��������
+				count_live_devices++;						//	сколько всего устройств живы в данный момент
+				count_free_places += sensor_is_free(i);		//	сколько из них свободны
 			}
 		}
 	}
 
 	utoa(count_live_devices, res_live, 10);
-	utoa(count_free_places, res_free, 10);		//	����� �������� �� ���������� count_free_places, �������� ��� � ���������� ��� � ���������� � ������ res_free
+	utoa(count_free_places, res_free, 10);		//	берет значение из переменной count_free_places, приводит его в десятичный вид и записывает в строку res_free
 
 	char res_all[3];
 
-	res_all[0] = res_free[0];	// res_free[0];	//	���-�� ��������� ���� � ����� ��������
+	res_all[0] = res_free[0];	// res_free[0];	//	кол-во свободных мест с живых датчиков
 	res_all[1] = '/';
-	res_all[2] = res_live[0];	//	���-�� ����� ��������
+	res_all[2] = res_live[0];	//	кол-во живый датчиков
 	
 		
 	//uint8_t data_len = 	strlen(res_all);
@@ -194,6 +184,7 @@ void prepare_message_to_screen (void)
 
 void choice_next_dev (void)
 {
+	message_to_LCD1602();
 	switch_dev_adr();
 	CURRENT_DEVICE_TYPE = unknown;
 	COUNT_NULL_PACK = 0;			//	 для rename
@@ -263,18 +254,14 @@ void Parking_Space(void)
 {
 	Parking_Space_CONTROL = DO_PARSING_CMD;	//	по умолчанию перейдем в поиск команды от верхней сети
 
-	if (READ_BIT(Parking_Space_STATUS,(1<<waiting_ACK)))	{return;}					//	если ждем ACK, то выходим
+	if (READ_BIT(Parking_Space_STATUS,(1<<waiting_ACK)))	{return;}				//	если ждем ACK, то выходим
 
-	put_byte_UART1(0xC4);
-
-	if ((!READ_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO))))	{return;}		//	если не в режиме AUTO, то вы ходим
+	if ((!READ_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO))))	{return;}		//	если не в режиме AUTO, то выходим
 	
 	static uint8_t ATTEMPTS = 0;
 	
 	creat_pack();								//	собираем основу пакета
 	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;		//	ставим время ACK
-	
-	put_byte_UART1(0xC5);
 
 	switch(PARKING_STAGE)
 	{
@@ -344,7 +331,7 @@ void Parking_Space(void)
 		{
 			switch (CURRENT_DEVICE)		//	����� ����� � ���������� � ������� �� ��������
 			{
-				case NONAME_DEVICE:	{give_cmd_rename();}	break;
+				case NONAME_DEVICE:		{give_cmd_rename();}	break;
 					
 				default:				//	����� ������������ (���������������������)
 				{
@@ -389,9 +376,14 @@ void put_tx_pack (void)
 	tx_pack[BYTE_COUNT_PACK] = ++CURRENT_COUNT_PACK;
 	tx_pack[tx_pack[BYTE_LEN]-1] =	crc8(&tx_pack[0],tx_pack[BYTE_LEN]-1);		//	11/12 byte:	посчитать и записать crc в пакет
 	for (uint8_t i = 0; i < tx_pack[BYTE_LEN]; i++)		{put_byte_UART2(tx_pack[i]);}
-	SET_BIT(Parking_Space_STATUS,(1<<waiting_ACK));		//	поднимаем флаг - ожидание ACK
+
+//TIME_FOR_TIME_OUT_ACK = 1000;
+
+	Parking_Space_CONTROL = DO_PARSING_ACK;					//	ищем ACK
+	SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));		//	поднимаем флаг - ожидание ACK
+	RTOS_SetTask(time_out_ACK,TIME_FOR_TIME_OUT_ACK,0);		//	время на получение всех пакетов (настроить ограничение максимального времени ожидания на датчиках)
+
 	WAIT_ACK_TIME_OUT = 1;								//	для кастыля, т.к. STATUS_MK,waiting_ACK произвольно поднимается
-	RTOS_SetTask(time_out_ACK,TIME_FOR_TIME_OUT_ACK,0);	//	время на получение всех пакетов (настроить ограничение максимального времени ожидания на датчиках)
 }
 
 
@@ -415,7 +407,10 @@ void Parking_Space_Init (void)
 		RS232_ignor = 0;
 		*/
 
-		RS232_address = 9;								//	пока дадим себе адрес №9 в сети верхнего уровня
+
+		adr_in_uart_1 = 7;								//	пока дадим себе адрес №9 в сети верхнего уровня
+		adr_in_uart_2 = 1;
+
 
 		CURRENT_DEVICE = 2;								//	начнем с устройства №2
 		COUNT_NULL_PACK = TOO_LITTLE;					//	чтобы запускался отсев
@@ -424,6 +419,7 @@ void Parking_Space_Init (void)
 		Parking_Space_CONTROL = 0;
 
 		SET_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO));
+		Parking_Space_CONTROL = DO_PARSING_CMD;
 
 		PARKING_STAGE = SEARCH;
 
@@ -438,8 +434,8 @@ uint8_t sensor_is_live(uint8_t sens_adr)
 	uint8_t bit = 7 - (sens_adr - (byte*8));	//	узнаем в каком бите лежит его состояние и зеркалим последовательность бит
 
 	//	если датчик с этим имеет состояние "живой"
-	if (READ_BIT(devices_is_live[byte],bit))	{return 1;}
-	else										{return 0;}
+	if (READ_BIT(devices_is_live[byte],(1<<bit)))	{return 1;}
+	else											{return 0;}
 }
 
 uint8_t sensor_is_free(uint8_t sens_adr)
@@ -449,7 +445,7 @@ uint8_t sensor_is_free(uint8_t sens_adr)
 	uint8_t bit = 7 - (sens_adr - (byte*8));	//	узнаем в каком бите лежит его состояние
 
 	//	если место под этим датчиком "занято"
-	if (READ_BIT(sensors_status[byte],bit))	{return 0;}
+	if (READ_BIT(sensors_status[byte],(1<<bit)))	{return 0;}
 	else										{return 1;}
 }
 
@@ -458,7 +454,7 @@ void set_device_as_live(uint8_t _sensor)
 	// пометить последний датчик, с которым работали, как живой
 	uint8_t byte = _sensor/8;					//	узнаем в каком байте лежит его состояние
 	uint8_t bit = 7 - (_sensor - (byte*8));		//	узнаем в каком бите лежит его состояние
-	SET_BIT(devices_is_live[byte],bit);			//	записываем 1 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
+	SET_BIT(devices_is_live[byte],(1<<bit));			//	записываем 1 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
 }
 
 void set_device_as_dead(uint8_t _sensor)
@@ -466,7 +462,7 @@ void set_device_as_dead(uint8_t _sensor)
 	// пометить последний датчик, с которым работали, как нерабочий
 	uint8_t byte = _sensor/8;					//	узнаем в каком он байте
 	uint8_t bit = 7 - (_sensor - (byte*8));		//	узнаем какой бит ему соответствует
-	CLEAR_BIT(devices_is_live[byte],bit);			//	пометим датчик как нерабочий
+	CLEAR_BIT(devices_is_live[byte],(1<<bit));			//	пометим датчик как нерабочий
 }
 
 void set_status_as_taken(uint8_t _sensor)
@@ -474,7 +470,7 @@ void set_status_as_taken(uint8_t _sensor)
 	// пометить последний датчик, с которым работали, как занятое место
 	uint8_t byte = _sensor/8;					//	узнаем в каком он байте
 	uint8_t bit = 7 - (_sensor - (byte*8));	//	узнаем какой бит ему соответствует
-	SET_BIT(sensors_status[byte],bit);				//	записываем 1 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
+	SET_BIT(sensors_status[byte],(1<<bit));				//	записываем 1 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
 }
 
 void set_status_as_free(uint8_t _sensor)
@@ -482,7 +478,7 @@ void set_status_as_free(uint8_t _sensor)
 	// пометить последний датчик, с которым работали, как свободное место
 	uint8_t byte = _sensor/8;					//	узнаем в каком он байте
 	uint8_t bit = 7 - (_sensor - (byte*8));	//	узнаем какой бит ему соответствует
-	CLEAR_BIT(sensors_status[byte],bit);				//	записываем 0 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
+	CLEAR_BIT(sensors_status[byte],(1<<bit));				//	записываем 0 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
 }
 /////////	КОНЕЦ СЛУЖЕБНЫХ ФУНКЦИИ		/////////
 
@@ -500,3 +496,42 @@ void trigger (void)	//	входное значение - желаемое дей
 	CURRENT_ACTION = DO_PARKING_SPACE;
 }
 
+
+
+void message_to_LCD1602 (void)
+{
+
+	uint8_t	count_live_devices = 0;			uint8_t	count_free_places = 0;
+	char	res_live[1];					char	res_free[1];
+
+	for (uint8_t i = 2; i<MAX_DEVICES; i++)
+	{
+	//	if (i != CURRENT_DEVICE)							//	проходим по все устройствам из памяти кроме текущего, т.к. текущий - экран
+		{
+			if (sensor_is_live(i))							//	проверяем статус жизни данного устройства
+			{
+				count_live_devices++;						//	сколько всего устройств живы в данный момент
+				count_free_places += sensor_is_free(i);		//	сколько из них свободны
+			}
+		}
+	}
+
+
+	utoa(count_live_devices, res_live, 10);
+	utoa(count_free_places, res_free, 10);		//	берет значение из переменной count_free_places, приводит его в десятичный вид и записывает в строку res_free
+
+	char res_all[6];
+
+
+	res_all[0] = res_free[0];	// res_free[0];	//	кол-во свободных мест с живых датчиков
+	res_all[1] = '/';
+	res_all[2] = res_live[0];	//	кол-во живый датчиков
+
+	for (uint8_t i = 3; i < 6; i++)	{res_all[i] = 0x00;}	//	кастыль для подчистки хвоста строки
+
+	LCD_Command(0x01);		//	очистка дисплея					(LCD_CLEAR)
+	delay_ms(2);			//	долгая операция
+	LCD_Command(LCD_SETDDRAMADDR | SECONDSTRING);	//	писать с нулевого адреса
+	LCDsendString(res_all);
+
+}

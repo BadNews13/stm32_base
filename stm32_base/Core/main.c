@@ -53,11 +53,11 @@ int main(void)
 //	uart3_init (9600);
 
 	RTOS_Init();						//	запускает RTOS
-	RTOS_SetTask(write_INIT_RTOS_in_lcd, 3000, 0);		// для теста (через ~10 секунд включится светодиод на отладочной плате)
+//	RTOS_SetTask(write_INIT_RTOS_in_lcd, 3000, 0);		// для теста (через ~10 секунд включится светодиод на отладочной плате)
 //	RTOS_DeleteTask(write_INIT_RTOS_in_lcd);
 
 //	NRF_Init();
-//	RTOS_SetTask(time_out_ACK,300,0);
+
 
 /*
 //	Для светодиода на плате
@@ -68,7 +68,6 @@ int main(void)
 	//===========================================================================================================================
 */
 
-
 	//============== Настройка вывода TX (PB10) =================================================================================
 		uint8_t offset =  (USART3_TX_pin - 8) * 4;				//	(10-8) * 4 = 8
 		GPIOB->CRH &= ~( GPIO_BITS_MASK << offset );	//
@@ -77,39 +76,27 @@ int main(void)
 
 
 //	RTOS_SetTask(send_byte_to_uart, 1000, 0);
-/*
-	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
-	adr_in_uart_1 = 7;
-	adr_in_uart_2 = 9;
+	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
 	put_byte_UART1(adr_in_uart_1);
 	put_byte_UART2(adr_in_uart_2);
 
-	Parking_Space_CONTROL = DO_PARSING_CMD;
-*/
 	while(1)
 	{
+		RTOS_DispatchTask();	// обязательно крутиться тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
 
-/*		switch (Parking_Space_CONTROL)
+		switch (Parking_Space_CONTROL)
 		{
 			case DO_PARSING_CMD:	{find_pack_from_uart_1();}	break;	//	искать пакет от ПК
 			case DO_CMD_EXE:		{pack_from_uart_1_exe();}	break;	//	выполнить пакет от ПК
 			case DO_PARSING_ACK:	{find_pack_from_uart_2();}	break;	//	искать пакет от подчиненного
-//			case DO_ACK_EXE:		{pack_RS485_exe();}			break;	//	выполнить пакет от подчиненого
+			case DO_ACK_EXE:		{pack_from_uart_2_exe();}	break;	//	выполнить пакет от подчиненого
 
 			case DO_PARKING_SPACE:	{Parking_Space();}			break;
 		}
-*/
-
 
 //		delay_ms(100);
-
-//		for (uint8_t i = 0; i < uart2_rx_buf_size; i++)	{put_byte_UART1(uart2_rx_buf[i]);}
-//		Parking_Space();
-
-//		RTOS_DispatchTask();	// обязательно крутиться тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
-//		pack_exe();
 
 /*
 		if(find_pack_from_uart_2())
@@ -123,7 +110,6 @@ int main(void)
 			pack_from_uart_1_exe();
 		}
 */
-
 	}
 }
 
@@ -244,6 +230,10 @@ void GPIO_Init (void)
 void send_byte_to_uart(void)
 {
 	put_byte_UART1(0xD1);
+	put_byte_UART1(Parking_Space_CONTROL);
+	put_byte_UART1(Parking_Space_STATUS);
+	put_byte_UART1(0xD1);
+
 	put_byte_UART2(0xD2);
 //		put_byte_UART3(0xD3);
 
