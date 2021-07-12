@@ -12,27 +12,34 @@
 uint8_t find_ACK (void)
 {
 	//	for cycle and start from zero index
-	static uint8_t start_position = uart2_rx_buf_size;
-	start_position++;
-	if (start_position >= uart2_rx_buf_size)	{start_position = 0;}
+	static uint8_t start_idx = uart2_rx_buf_size;	//	offset
+	start_idx++;
+	if (start_idx >= uart2_rx_buf_size)	{start_idx = 0;}
+
+	static uint8_t cnt = 0;
+	cnt++;
 
 //====================================================================================================
 
 	//	get index for byte with length
-	uint8_t byte_LENGTH_index = BYTE_LEN + start_position;
-	if (byte_LENGTH_index >= uart2_rx_buf_size)		{byte_LENGTH_index = 	byte_LENGTH_index - 	uart2_rx_buf_size;}
+	uint8_t byte_LENGTH_index = BYTE_LEN + start_idx;
+	if (byte_LENGTH_index >= uart2_rx_buf_size)		{byte_LENGTH_index = 	byte_LENGTH_index - 	uart2_rx_buf_size;}	//	строка бесполезна
 
 	//	get index for byte with receiver address
-	uint8_t byte_RECEIVER_index = BYTE_RECEIVER_ADR + start_position;
+	uint8_t byte_RECEIVER_index = BYTE_RECEIVER_ADR + start_idx;
 	if (byte_RECEIVER_index >= uart2_rx_buf_size)	{byte_RECEIVER_index = 	byte_RECEIVER_index - 	uart2_rx_buf_size;}
 
 	//	get index for byte with flags
-	uint8_t byte_FLAGS_index = BYTE_FLAGS + start_position;
+	uint8_t byte_FLAGS_index = BYTE_FLAGS + start_idx;
 	if (byte_FLAGS_index >= uart2_rx_buf_size)		{byte_FLAGS_index = 	byte_FLAGS_index - 		uart2_rx_buf_size;}
 
+	//	get index for byte with cmd
+	uint8_t byte_COMMAND_index = BYTE_COMMAND + start_idx;
+	if (byte_COMMAND_index >= uart2_rx_buf_size)	{byte_COMMAND_index = 	byte_COMMAND_index - 	uart2_rx_buf_size;}
+
 	//	get index for byte with crc
-	uint8_t byte_CRC_index = start_position + uart2_rx_buf[byte_LENGTH_index] - 1;
-	if (byte_CRC_index >= uart2_rx_buf_size)			{byte_CRC_index	= 		byte_CRC_index - 		uart2_rx_buf_size;}
+	uint8_t byte_CRC_index = start_idx + uart2_rx_buf[byte_LENGTH_index] - 1;
+	if (byte_CRC_index >= uart2_rx_buf_size)		{byte_CRC_index	= 		byte_CRC_index - 		uart2_rx_buf_size;}
 
 //====================================================================================================
 
@@ -46,22 +53,27 @@ uint8_t find_ACK (void)
 	//	check "flag_pack" in flags
 	if (!(READ_BIT(uart2_rx_buf[byte_FLAGS_index], (1<<CMD_FLAGS_PACK))))	{return 0;}
 
-	//	check crc
-	if (start_position + uart2_rx_buf[byte_LENGTH_index] >= uart2_rx_buf_size)
-	{
-		uint8_t crc = 0;
+	//	check "cmd_field" in cmd
+	if (uart2_rx_buf[byte_COMMAND_index] < 0x20)							{return 0;}
+	if (uart2_rx_buf[byte_COMMAND_index] > 0x2F)							{return 0;}
 
-		uint8_t first_part_cnt = 	uart2_rx_buf_size 				- start_position	;	//	количество байт до конца буфера (до перехода)
+
+	//	check crc
+	if (start_idx + uart2_rx_buf[byte_LENGTH_index] >= uart2_rx_buf_size)
+	{
+		uint8_t static crc = 0;
+
+		uint8_t first_part_cnt = 	uart2_rx_buf_size 				- start_idx	;	//	количество байт до конца буфера (до перехода)
 		uint8_t second_part_cnt = 	uart2_rx_buf[byte_LENGTH_index] - first_part_cnt	;	//	количество байт вначале буфера (после перехода)
 
-		crc = 	crc8_parts(	0,		&uart2_rx_buf[start_position],	first_part_cnt);
+		crc = 	crc8_parts(	0,		&uart2_rx_buf[start_idx],		first_part_cnt);
 		crc = 	crc8_parts(	crc,	&uart2_rx_buf[0],				second_part_cnt	- 1);
 
-		if(uart2_rx_buf[byte_CRC_index] != crc) {return 0;}
+		if(uart2_rx_buf[byte_CRC_index] != crc) {cnt = 0; return 0;}
 	}
 	else
 	{
-		if(	uart2_rx_buf[byte_CRC_index] != crc8(&uart2_rx_buf[start_position],uart2_rx_buf[byte_LENGTH_index]-1))	{return 0;}
+		if(	uart2_rx_buf[byte_CRC_index] != crc8(&uart2_rx_buf[start_idx],uart2_rx_buf[byte_LENGTH_index]-1))	{cnt = 0; return 0;}
 	}
 
 
@@ -70,15 +82,15 @@ uint8_t find_ACK (void)
 	uint8_t size = uart2_rx_buf[byte_LENGTH_index];
 	for (uint8_t i = 0; i < size; i++)
 	{
-		if(i + start_position < uart2_rx_buf_size)
+		if(i + start_idx < uart2_rx_buf_size)
 		{
-			pack_for_me_from_uart_2[i] = 	uart2_rx_buf[i + start_position];
-											uart2_rx_buf[i + start_position] 	= 0x00;
+			pack_for_me_from_uart_2[i] = 	uart2_rx_buf[i + start_idx];
+											uart2_rx_buf[i + start_idx] 	= 0x00;
 		}
 		else
 		{
-			pack_for_me_from_uart_2[i] =	uart2_rx_buf[i - uart2_rx_buf_size + start_position];
-											uart2_rx_buf[i - uart2_rx_buf_size + start_position]	= 0x00;
+			pack_for_me_from_uart_2[i] =	uart2_rx_buf[i - uart2_rx_buf_size + start_idx];
+											uart2_rx_buf[i - uart2_rx_buf_size + start_idx]	= 0x00;
 		}
 	}
 
