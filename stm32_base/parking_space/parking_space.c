@@ -96,10 +96,13 @@ void rebuild_for_resend (uint8_t *pack)
 
 void time_out_ACK (void)
 {	
-//	put_byte_UART1(0x99);
-//	WAIT_ACK_TIME_OUT = 0;
-	
-	Parking_Space_CONTROL = DO_PARSING_CMD;					//	поднимаеим флаг - проверить CMD от PC
+	if (CURRENT_DEVICE == 2)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
+	if (CURRENT_DEVICE == 3)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
+
+
+
+	for (uint8_t i = 0; i<30; i++)
+
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
 
 	if (!(CURRENT_DEVICE == NONAME_DEVICE))	{PARKING_STAGE = RESTART;}
@@ -252,13 +255,7 @@ void give_cmd_status (void)
 	
 void Parking_Space(void)
 {
-	Parking_Space_CONTROL = DO_PARSING_CMD;	//	по умолчанию перейдем в поиск команды от верхней сети
-
-	if (READ_BIT(Parking_Space_STATUS,(1<<waiting_ACK)))	{return;}				//	если ждем ACK, то выходим
-
-	if ((!READ_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO))))	{return;}		//	если не в режиме AUTO, то выходим
-	
-	static uint8_t ATTEMPTS = 0;
+	static uint8_t ATTEMPTS = 0;				//	попытки (для поиска новых устройств)
 	
 	creat_pack();								//	собираем основу пакета
 	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;		//	ставим время ACK
@@ -375,15 +372,11 @@ void put_tx_pack (void)
 {
 	tx_pack[BYTE_COUNT_PACK] = ++CURRENT_COUNT_PACK;
 	tx_pack[tx_pack[BYTE_LEN]-1] =	crc8(&tx_pack[0],tx_pack[BYTE_LEN]-1);		//	11/12 byte:	посчитать и записать crc в пакет
-	for (uint8_t i = 0; i < tx_pack[BYTE_LEN]; i++)		{put_byte_UART2(tx_pack[i]);}
 
-//TIME_FOR_TIME_OUT_ACK = 1000;
+	put_string_UART2(&tx_pack[0], tx_pack[BYTE_LEN]);
 
-	Parking_Space_CONTROL = DO_PARSING_ACK;					//	ищем ACK
 	SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));		//	поднимаем флаг - ожидание ACK
 	RTOS_SetTask(time_out_ACK,TIME_FOR_TIME_OUT_ACK,0);		//	время на получение всех пакетов (настроить ограничение максимального времени ожидания на датчиках)
-
-	WAIT_ACK_TIME_OUT = 1;								//	для кастыля, т.к. STATUS_MK,waiting_ACK произвольно поднимается
 }
 
 
@@ -407,10 +400,8 @@ void Parking_Space_Init (void)
 		RS232_ignor = 0;
 		*/
 
-
 		adr_in_uart_1 = 7;								//	пока дадим себе адрес №9 в сети верхнего уровня
 		adr_in_uart_2 = 1;
-
 
 		CURRENT_DEVICE = 2;								//	начнем с устройства №2
 		COUNT_NULL_PACK = TOO_LITTLE;					//	чтобы запускался отсев
@@ -419,10 +410,8 @@ void Parking_Space_Init (void)
 		Parking_Space_CONTROL = 0;
 
 		SET_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO));
-		Parking_Space_CONTROL = DO_PARSING_CMD;
 
 		PARKING_STAGE = SEARCH;
-
 }
 
 
@@ -486,14 +475,16 @@ void set_status_as_free(uint8_t _sensor)
 
 void trigger (void)	//	входное значение - желаемое действие
 {
-	if (READ_BIT(Parking_Space_STATUS,waiting_ACK) && !WAIT_ACK_TIME_OUT)	{CLEAR_BIT(Parking_Space_STATUS,waiting_ACK);}	//	пока кастыль (почему-то флаг подымается без отправки и т.к. RTOS не запускает time_out, то висим)
+	static uint8_t check_cmd = 1;
+	if (check_cmd)		{check_cmd = 0;		SET_BIT (Parking_Space_STATUS,	(1<<check_CMD));}
+	else				{check_cmd = 1;}
 
-	if (READ_BIT(Parking_Space_STATUS,check_CMD))		{CURRENT_ACTION = DO_PARSING_CMD;	return;}
-	if (READ_BIT(Parking_Space_STATUS,CMD_ready))		{CURRENT_ACTION = DO_CMD_EXE;		return;}
-	if (READ_BIT(Parking_Space_STATUS,ACK_ready))		{CURRENT_ACTION = DO_ACK_EXE;		return;}
-	if (READ_BIT(Parking_Space_STATUS,waiting_ACK))		{CURRENT_ACTION = DO_PARSING_ACK;	return;}
+	if (READ_BIT(Parking_Space_STATUS,(1<<check_CMD)))			{Parking_Space_CONTROL = DO_PARSING_CMD;	return;}
+	if (READ_BIT(Parking_Space_STATUS,(1<<CMD_ready)))			{Parking_Space_CONTROL = DO_CMD_EXE;		return;}
+	if (READ_BIT(Parking_Space_STATUS,(1<<ACK_ready)))			{Parking_Space_CONTROL = DO_ACK_EXE;		return;}
+	if (READ_BIT(Parking_Space_STATUS,(1<<waiting_ACK)))		{Parking_Space_CONTROL = DO_PARSING_ACK;	return;}
 
-	CURRENT_ACTION = DO_PARKING_SPACE;
+	if (READ_BIT(Parking_Space_STATUS,(1<<Parking_Space_AUTO))) {Parking_Space_CONTROL = DO_PARKING_SPACE;}
 }
 
 

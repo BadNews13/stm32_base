@@ -41,7 +41,7 @@ void pack_exe(void)
 
 void pack_from_uart_1_exe (void)
 {
-	Parking_Space_CONTROL = DO_PARKING_SPACE;		//	по умолчанию после функции переходим к работе системы Parking_space
+	CLEAR_BIT	(Parking_Space_STATUS,(1<<CMD_ready));
 
 	uint8_t *pack = &pack_for_me_from_uart_1[0];
 
@@ -55,12 +55,9 @@ void pack_from_uart_1_exe (void)
 		{
 			rebuild_for_resend(&pack[0]);		//	пересоберем пакет для отправки вниз
 			pack[pack[BYTE_LEN]-1] =	crc8(&pack[0],pack[BYTE_LEN]-1);	//	11/12 byte:	посчитать и записать crc в пакет
-			for (uint8_t i = 0; i < pack[BYTE_LEN]; i++)	{put_byte_UART2(pack[i]);}			//	отправим пакет вниз
-
-			Parking_Space_CONTROL = DO_PARSING_ACK;				//	ищем ACK
+			put_string_UART2(&pack[0], pack[BYTE_LEN]);
 			SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));
 			RTOS_SetTask(time_out_ACK,200,0);					//	запуск отсчета таймаута
-			//WAIT_ACK_TIME_OUT = 1;
 		}
 		break;
 
@@ -273,7 +270,8 @@ void pack_from_uart_1_exe (void)
 
 void pack_from_uart_2_exe (void)
 {
-	Parking_Space_CONTROL = DO_PARSING_CMD;	//	по умолчанию перейдем в поиск команды от верхней сети
+//	Parking_Space_CONTROL = DO_PARSING_CMD;	//	по умолчанию перейдем в поиск команды от верхней сети
+	CLEAR_BIT	(Parking_Space_STATUS,(1<<ACK_ready));
 
 //	sbit(STATUS_MK,check_CMD);	cbit(STATUS_MK,ACK_ready);	cbit(STATUS_MK,waiting_ACK);
 	RTOS_DeleteTask(time_out_ACK);					//	отменим вызов обработчика таймаута

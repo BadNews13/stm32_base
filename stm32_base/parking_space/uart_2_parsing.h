@@ -14,11 +14,16 @@
 #include <crc8.h>
 
 
-uint8_t find_pack_from_uart_2 (void);
+void find_pack_from_uart_2 (void);
+	uint8_t find_ACK (void);
+	uint8_t find_NULL_PACK (void);
 
 uint8_t adr_in_uart_2;
 
 uint8_t pack_for_me_from_uart_2[128];
+
+
+
 
 
 

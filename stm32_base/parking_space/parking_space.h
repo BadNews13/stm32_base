@@ -47,7 +47,7 @@ uint8_t used_network;
 	volatile uint8_t WAIT_ACK_TIME_OUT = 0;
 	volatile uint8_t CURRENT_ACTION = 0;
 	*/
-	volatile uint8_t WAIT_ACK_TIME_OUT;
+
 	volatile uint8_t CURRENT_ACTION;
 
 
@@ -195,8 +195,8 @@ uint8_t sensor_is_free(uint8_t adr_sensor);		//	проверить свобод�
 
 void set_device_as_live(uint8_t _sensor);		//	пометить сенсор как мертвый
 void set_device_as_dead(uint8_t _sensor);		//	пометить сенсор как живой
-void set_status_as_taken(uint8_t _sensor);					//	пометить последний датчик, с которым работали, как занятое мест
-void set_status_as_free(uint8_t _sensor);					//	пометить последний датчик, с которым работали, как свободное место
+void set_status_as_taken(uint8_t _sensor);		//	пометить последний датчик, с которым работали, как занятое мест
+void set_status_as_free(uint8_t _sensor);		//	пометить последний датчик, с которым работали, как свободное место
 
 
 

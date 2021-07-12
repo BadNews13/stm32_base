@@ -24,6 +24,8 @@
 
 #include "protocol.h"
 #include "parking_space.h"
+#include "cmd_interp.h"
+
 
 
 
@@ -58,7 +60,6 @@ int main(void)
 
 //	NRF_Init();
 
-
 /*
 //	Для светодиода на плате
 	//============== Настройка вывода TX (PA9) ==================================================================================
@@ -74,7 +75,6 @@ int main(void)
 		GPIOB->CRH |= ( OUTPUT_PUSH_PULL << offset );		//	альтернативная функция с выходом пуш-пул	AF_PUSH_PULL
 	//===========================================================================================================================
 
-
 //	RTOS_SetTask(send_byte_to_uart, 1000, 0);
 
 	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
@@ -84,8 +84,8 @@ int main(void)
 
 	while(1)
 	{
-		RTOS_DispatchTask();	// обязательно крутиться тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
-
+		RTOS_DispatchTask();	// обязательно крутится тут (иначе поставленные задачи будут вызываться из прерывания RTOS_timer
+		trigger();	//	функция управляющая системой Parking_Space
 		switch (Parking_Space_CONTROL)
 		{
 			case DO_PARSING_CMD:	{find_pack_from_uart_1();}	break;	//	искать пакет от ПК
@@ -95,21 +95,6 @@ int main(void)
 
 			case DO_PARKING_SPACE:	{Parking_Space();}			break;
 		}
-
-//		delay_ms(100);
-
-/*
-		if(find_pack_from_uart_2())
-		{
-			for(uint8_t i = 0; i < pack_for_me_from_uart_2[0]; i++)		{put_byte_UART1(pack_for_me_from_uart_2[i]);}
-		}
-
-		if(find_pack_from_uart_1())
-		{
-			for(uint8_t i = 0; i < pack_for_me_from_uart_1[0]; i++)		{put_byte_UART2(pack_for_me_from_uart_1[i]);}
-			pack_from_uart_1_exe();
-		}
-*/
 	}
 }
 
@@ -229,12 +214,12 @@ void GPIO_Init (void)
 }
 void send_byte_to_uart(void)
 {
-	put_byte_UART1(0xD1);
+//	put_byte_UART1(0xD1);
 	put_byte_UART1(Parking_Space_CONTROL);
 	put_byte_UART1(Parking_Space_STATUS);
-	put_byte_UART1(0xD1);
+//	put_byte_UART1(0xD1);
 
-	put_byte_UART2(0xD2);
+//	put_byte_UART2(0xD2);
 //		put_byte_UART3(0xD3);
 
 	RTOS_SetTask(send_byte_to_uart, 1000, 0);

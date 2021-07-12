@@ -131,15 +131,13 @@ void uart2_dmaTX_init(void)
 }
 
 
-void DMA1_Channel6_IRQHandler(void)	//	закончился прием от ПК (RX)
+void DMA1_Channel6_IRQHandler(void)	//	закончился прием (RX)
 {
-//	GPIOB->BRR = ( 1 << 10 );							//	установка линии TX3 в 1 (диод не светится)
-//	GPIOA->BRR = ( 1 << 2 );		// установка линии в 0 (диод светится)	//	включиться только после пересылки настроенного количества байт
+	/*
 	static uint8_t trigger = 0;
-
 	if (trigger)	{GPIOB->BSRR = ( 1 << 10 ); trigger = 0;}		// установка линии в 1
 	else			{GPIOB->BRR = ( 1 << 10 ); 	trigger = 1;}		// установка линии в 0
-
+	 */
 
 	if(READ_BIT(DMA1->ISR, DMA_ISR_TCIF6) == (DMA_ISR_TCIF6)) // если поднят флаг - завершена пересылка
 	{
@@ -158,6 +156,9 @@ void DMA1_Channel7_IRQHandler(void)	//	закончилась отправка (
 //	GPIOB->BRR = ( 1 << 10 );							//	установка линии TX3 в 1 (диод не светится)
 	if(READ_BIT(DMA1->ISR, DMA_ISR_TCIF7) == (DMA_ISR_TCIF7))		//	если передали данные из памяти в периферию
 	{
+//====================================================================================================================================
+//======= для "хаотичной" передачи по байту (при передачи строк не используется) =======================================================
+//====================================================================================================================================
 		// узнаем докинули ли нам еще байт пока отправляли
 		// или же мы просто обрабатываем переход кольцевого буфера к началу
 		if (uart2_tx_counter)
@@ -196,8 +197,11 @@ void DMA1_Channel7_IRQHandler(void)	//	закончилась отправка (
 												DMA_CNDTR7_NDT,						//	сбросить оставшееся количетсво байт для передачи
 																uart2_DMA_TX_count);//	записать это значение
 			SET_BIT		(DMA1_Channel7->CCR, DMA_CCR7_EN);  						//	Enable DMA channel 4
+
 		}
 		else    {CLEAR_BIT(DMA1_Channel7->CCR, DMA_CCR7_EN);}					//	Disable DMA channels 4 // если больше нечего отправлять
+//====================================================================================================================================
+
 	}
 
 
@@ -228,7 +232,7 @@ void put_byte_UART2(uint8_t c)
 	//	Если идет передача
 	if (READ_REG(DMA_CNDTR7_NDT)&&READ_BIT(DMA1_Channel7->CCR, DMA_CCR7_EN) == (DMA_CCR7_EN))//	если мы еще прошлые байты не отправили и если канал открыт
 	{
-		//return;	//	в прерывании по завершении перенаправления отработает этот вариант
+	//	return;	//	в прерывании по завершении перенаправления отработает этот вариант
 	}
 	else								//	если DMA сейчас не перенаправляет байты
 	{
@@ -292,5 +296,28 @@ void USART2_DMA_init(void)
 
 	SET_BIT		(USART2->CR1, USART_CR1_UE);									//	Enable uart
 }
+
+
+void put_string_UART2(uint8_t *string, uint8_t size)
+{
+	NVIC_DisableIRQ(DMA1_Channel7_IRQn);		//DMA1_Channel4_IRQn interrupt init
+
+	for (uint8_t i = 0; i < size; i++)	{uart2_tx_buf[i] = string[i];}	//	запишем символ в строку (для DMA доступа)
+
+	//	Запускаем перенаправление
+	CLEAR_BIT	(DMA1_Channel7->CCR, DMA_CCR4_EN);							//	Disable DMA channel 4
+	WRITE_REG	(DMA1_Channel7->CMAR, (uint32_t)&uart2_tx_buf[0]);			//	указываем с какого места памяти делать транзакцию (в uart)
+	//	указываем сколько байт надо перенаправить
+	MODIFY_REG	(DMA1_Channel7->CNDTR,										//	Set Number of data to transfer
+										DMA_CNDTR7_NDT,						//	сбросить оставшееся количетсво байт для передачи
+														size);				//	записать это значение
+	SET_BIT		(DMA1_Channel7->CCR, DMA_CCR7_EN);  						//	Enable DMA channel 4
+
+	NVIC_EnableIRQ(DMA1_Channel7_IRQn);		//DMA1_Channel4_IRQn interrupt init
+}
+
+
+
+
 
 
