@@ -26,7 +26,7 @@
 #include "parking_space.h"
 #include "cmd_interp.h"
 
-
+#include "flash.h"
 
 
 void RCC_DeInit(void);			//	сбрасывает настройки тактирования
@@ -37,6 +37,7 @@ void GPIO_Init (void);			//	настраивает входы выходы
 void write_INIT_RTOS_in_lcd(void);
 void send_byte_to_uart(void);
 
+void system_reset(void);
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
   #warning "FPU is not initialized, but the project is compiling for an FPU. Please initialize the FPU before use."
@@ -60,6 +61,31 @@ int main(void)
 
 //	NRF_Init();
 
+
+
+//======================================================================
+
+	FLASH_Init();
+	FLASH_Unlock();
+	FLASH_Erase_Page(LAST_PAGE);
+
+	uint32_t byte_4 = flash_read(LAST_PAGE);
+
+	for (uint8_t i = 0; i < 4; i++)		{put_byte_UART1(byte_4 >> (8 * i));}
+
+	uint8_t size = 10;
+	uint8_t data[size];	for (uint8_t i = 0; i < size; i++)	{data[i] = 0x44+i;}
+
+	Internal_Flash_Write(&data[0], LAST_PAGE, size);
+//	FLASH_Lock();
+
+	delay_ms(500);
+	byte_4 = flash_read(LAST_PAGE);
+
+	for (uint8_t i = 0; i < 4; i++)		{put_byte_UART1(byte_4 >> (8 * i));}
+//======================================================================
+
+
 /*
 //	Для светодиода на плате
 	//============== Настройка вывода TX (PA9) ==================================================================================
@@ -81,6 +107,15 @@ int main(void)
 
 	put_byte_UART1(adr_in_uart_1);
 	put_byte_UART2(adr_in_uart_2);
+
+	FLASH->KEYR = 0x45670123;	//	первый ключ для разблокировки FLASH памяти
+	FLASH->KEYR = 0xCDEF89AB;	//	второй ключ для разблокировки FLASH памяти
+/*
+	FLASH_Latency_0 - 0 < SYSCLK≤ 24 MHz
+	FLASH_Latency_1 - 24 MHz < SYSCLK ≤ 48 MHz
+	FLASH_Latency_2 - 48 MHz < SYSCLK ≤ 72 MHz
+*/
+
 
 	while(1)
 	{
@@ -225,3 +260,13 @@ void send_byte_to_uart(void)
 	RTOS_SetTask(send_byte_to_uart, 1000, 0);
 
 }
+
+
+// На всякий случай, если понадобится, то перезагрузка делается вот так:
+void system_reset(void)
+{
+   SCB->AIRCR = (0x5FA << SCB_AIRCR_VECTKEYSTAT_Pos) | SCB_AIRCR_SYSRESETREQ_Msk;
+   __DSB();
+  while(1);
+}
+

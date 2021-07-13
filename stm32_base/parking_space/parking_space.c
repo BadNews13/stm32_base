@@ -475,16 +475,21 @@ void set_status_as_free(uint8_t _sensor)
 
 void trigger (void)	//	входное значение - желаемое действие
 {
+	__disable_irq (); // запретить прерывания
+	uint8_t STATUS = Parking_Space_STATUS;
+	__enable_irq ();  // разрешить прерывания
+
 	static uint8_t check_cmd = 1;
 	if (check_cmd)		{check_cmd = 0;		SET_BIT (Parking_Space_STATUS,	(1<<check_CMD));}
 	else				{check_cmd = 1;}
 
-	if (READ_BIT(Parking_Space_STATUS,(1<<check_CMD)))			{Parking_Space_CONTROL = DO_PARSING_CMD;	return;}
-	if (READ_BIT(Parking_Space_STATUS,(1<<CMD_ready)))			{Parking_Space_CONTROL = DO_CMD_EXE;		return;}
-	if (READ_BIT(Parking_Space_STATUS,(1<<ACK_ready)))			{Parking_Space_CONTROL = DO_ACK_EXE;		return;}
-	if (READ_BIT(Parking_Space_STATUS,(1<<waiting_ACK)))		{Parking_Space_CONTROL = DO_PARSING_ACK;	return;}
+	if (READ_BIT(STATUS,(1<<check_CMD)))			{Parking_Space_CONTROL = DO_PARSING_CMD;	return;}
+	if (READ_BIT(STATUS,(1<<CMD_ready)))			{Parking_Space_CONTROL = DO_CMD_EXE;		return;}
+	if (READ_BIT(STATUS,(1<<ACK_ready)))			{Parking_Space_CONTROL = DO_ACK_EXE;		return;}
+	if (READ_BIT(STATUS,(1<<waiting_ACK)))			{Parking_Space_CONTROL = DO_PARSING_ACK;	return;}
 
-	if (READ_BIT(Parking_Space_STATUS,(1<<Parking_Space_AUTO))) {Parking_Space_CONTROL = DO_PARKING_SPACE;}
+	if (READ_BIT(STATUS,(1<<Parking_Space_AUTO))) 	{Parking_Space_CONTROL = DO_PARKING_SPACE;}
+
 }
 
 
