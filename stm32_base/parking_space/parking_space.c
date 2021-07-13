@@ -96,8 +96,8 @@ void rebuild_for_resend (uint8_t *pack)
 
 void time_out_ACK (void)
 {	
-	if (CURRENT_DEVICE == 2)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
-	if (CURRENT_DEVICE == 3)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
+//	if (CURRENT_DEVICE == 2)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
+//	if (CURRENT_DEVICE == 3)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
 
 
 
@@ -375,6 +375,8 @@ void put_tx_pack (void)
 
 	put_string_UART2(&tx_pack[0], tx_pack[BYTE_LEN]);
 
+//	TIME_FOR_TIME_OUT_ACK = 1000;
+
 	SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));		//	поднимаем флаг - ожидание ACK
 	RTOS_SetTask(time_out_ACK,TIME_FOR_TIME_OUT_ACK,0);		//	время на получение всех пакетов (настроить ограничение максимального времени ожидания на датчиках)
 }
@@ -395,7 +397,7 @@ void Parking_Space_Init (void)
 	#endif
 
 		/*
-		RS232_address = eeprom_read_byte(EEPROM_ADR); 	//	адрес в сети RS485 (основная рабочая сеть системы)
+		RS232_address = eeprom_read_byte(EEPROM_ADR); 				//	адрес в сети RS485 (основная рабочая сеть системы)
 		if (RS232_address == NONAME_DEVICE)	{Timer_0_ini_CTC();}	// если адрес нулевой, то запустим таймер для случайного значения
 		RS232_ignor = 0;
 		*/

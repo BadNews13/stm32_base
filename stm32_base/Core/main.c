@@ -55,6 +55,8 @@ int main(void)
 	uart2_init (4800);
 //	uart3_init (9600);
 
+	FLASH_Init();
+
 	RTOS_Init();						//	запускает RTOS
 //	RTOS_SetTask(write_INIT_RTOS_in_lcd, 3000, 0);		// для теста (через ~10 секунд включится светодиод на отладочной плате)
 //	RTOS_DeleteTask(write_INIT_RTOS_in_lcd);
@@ -64,25 +66,26 @@ int main(void)
 
 
 //======================================================================
-
-	FLASH_Init();
+/*
+//	FLASH_Init();
 	FLASH_Unlock();
-	FLASH_Erase_Page(LAST_PAGE);
+	FLASH_Erase_Page(Page_31);
 
-	uint32_t byte_4 = flash_read(LAST_PAGE);
+	uint32_t byte_4 = flash_read(Page_31);
 
 	for (uint8_t i = 0; i < 4; i++)		{put_byte_UART1(byte_4 >> (8 * i));}
 
 	uint8_t size = 10;
 	uint8_t data[size];	for (uint8_t i = 0; i < size; i++)	{data[i] = 0x44+i;}
 
-	Internal_Flash_Write(&data[0], LAST_PAGE, size);
-//	FLASH_Lock();
+	Internal_Flash_Write(&data[0], Page_31, size);
+	FLASH_Lock();
 
 	delay_ms(500);
-	byte_4 = flash_read(LAST_PAGE);
+	byte_4 = flash_read(Page_31);
 
 	for (uint8_t i = 0; i < 4; i++)		{put_byte_UART1(byte_4 >> (8 * i));}
+*/
 //======================================================================
 
 
@@ -105,16 +108,38 @@ int main(void)
 
 	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
+
+
+/*
+	for (uint8_t i = 0; i < 32; i++)	{Page[i] = flash_read(Page_30);}	//	считываем страницу
+*/
+/*
+	for (uint8_t i = 0; i < 32; i++)
+	{
+		uint32_t tmp_b = flash_read(Page_30 + (0x20*i));	//+(32*i)
+		for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(tmp_b >> (8 * j));}
+		delay_ms(100);
+	}
+	delay_ms(100);
+	put_byte_UART1(0x00);
+	delay_ms(100);
+	for (uint8_t i = 0; i < 32; i++)
+	{
+		uint32_t tmp_b = flash_read(Page_31 + (0x20*i));	//+(32*i)
+		for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(tmp_b >> (8 * j));}
+		delay_ms(100);
+	}
+*/
+
+
+	uint32_t  byte_tmp = flash_read(Page_30);
+	for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(byte_tmp >> (8 * j));}
+
+	adr_in_uart_1 = byte_tmp;//>>24;
+	delay_ms(100);
 	put_byte_UART1(adr_in_uart_1);
 	put_byte_UART2(adr_in_uart_2);
 
-	FLASH->KEYR = 0x45670123;	//	первый ключ для разблокировки FLASH памяти
-	FLASH->KEYR = 0xCDEF89AB;	//	второй ключ для разблокировки FLASH памяти
-/*
-	FLASH_Latency_0 - 0 < SYSCLK≤ 24 MHz
-	FLASH_Latency_1 - 24 MHz < SYSCLK ≤ 48 MHz
-	FLASH_Latency_2 - 48 MHz < SYSCLK ≤ 72 MHz
-*/
 
 
 	while(1)
@@ -262,11 +287,5 @@ void send_byte_to_uart(void)
 }
 
 
-// На всякий случай, если понадобится, то перезагрузка делается вот так:
-void system_reset(void)
-{
-   SCB->AIRCR = (0x5FA << SCB_AIRCR_VECTKEYSTAT_Pos) | SCB_AIRCR_SYSRESETREQ_Msk;
-   __DSB();
-  while(1);
-}
+
 

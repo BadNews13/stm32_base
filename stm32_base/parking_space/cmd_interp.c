@@ -20,6 +20,9 @@
 
 #include "protocol.h"
 
+
+#include "flash.h"
+
 void pack_exe(void)
 {
 
@@ -96,7 +99,7 @@ void pack_from_uart_1_exe (void)
 						}
 						break;
 
-						case PRM_RESET:	{/*RS232_ignor = 0;*/}	break;	//	перенести сюда аппаратный сброс
+						case PRM_RESET:	{system_reset();/*RS232_ignor = 0;*/}	break;	//	перенести сюда аппаратный сброс
 
 						//default:		{send_ack_error(INCORRECT_PARAMETER);}	break;
 					}
@@ -109,9 +112,25 @@ void pack_from_uart_1_exe (void)
 					{
 						case NO_PARAMETERS:
 						{
+							put_byte_UART1(0xCF);
 						//	RS232_address = *p_data;
 							adr_in_uart_1 = p_data[0];							//	запишем новоый адрес в рабочую переменную
 			//				eeprom_update_byte(EEPROM_ADR,RS232_address);		//	адрес в сети RS485 (основная рабочая сеть системы)
+
+							uint8_t cnt_word = 32;
+							for (uint8_t i = 0; i < cnt_word; i++)	{Page[i] = flash_read(Page_30);}	//	считываем страницу
+
+							Page[0] = 3;	//p_data[0]<<24;													//	записываем новый адрес данного устройства
+							FLASH_Unlock();																//	разблокируем память
+							FLASH_Erase_Page(Page_30);													//	стираем память
+
+							uint8_t data[10];
+									data[0]	 = p_data[0];
+
+							Internal_Flash_Write(&data[0], Page_30, 10);								//	записываем всю страницу обратно в память
+							FLASH_Lock();																//	блокируем память
+
+
 						}
 						break;
 
@@ -471,4 +490,13 @@ void prepare_ACK (void)
 	tx_pack[BYTE_PARAMETER] =				pack_for_me_from_uart_1[BYTE_PARAMETER];		//	записываем параметр команды - Ошибка (на случай если не сможем обработать)
 
 //	 tx_pack[10]	=	crc;
+}
+
+
+// На всякий случай, если понадобится, то перезагрузка делается вот так:
+void system_reset(void)
+{
+   SCB->AIRCR = (0x5FA << SCB_AIRCR_VECTKEYSTAT_Pos) | SCB_AIRCR_SYSRESETREQ_Msk;
+   __DSB();
+  while(1);
 }

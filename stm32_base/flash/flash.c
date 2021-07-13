@@ -62,8 +62,15 @@ void Internal_Flash_Write(unsigned char* data, uint32_t address, unsigned int co
 
 	FLASH->CR |= FLASH_CR_PG;
 
-	for (i = 0; i < count; i += 2) {
+//	for (uint8_t i = 0; i < count; i++) {}
+
+
+
+
+	for (i = 0; i < count; i += 2)
+	{
 		*(volatile unsigned short*)(address + i) = (((unsigned short)data[i + 1]) << 8) + data[i];
+
 		while (!(FLASH->SR & FLASH_SR_EOP));
 		FLASH->SR = FLASH_SR_EOP;
 	}

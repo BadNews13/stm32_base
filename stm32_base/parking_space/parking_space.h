@@ -13,15 +13,12 @@
 	 #include "protocol.h"
 
 
-
 // из parking_defines.h ======================================================================
 #define that_device_is_HEAD
 #define MAX_DEVICES 5							//	количество устройств в данном узле
 uint8_t devices_is_live[(MAX_DEVICES/8)+1];		//	массив работающих устройств (1 бит - 1 устройство) (номер бита в массиве = адресу датчика)
 uint8_t sensors_status[(MAX_DEVICES/8)+1];		//	массив результатов датчиков (1 бит - 1 датчик) (номер бита в массиве = адресу датчика)
 
-//адреса
-#define EEPROM_ADR	0x01						//	адрес ячейки в энергонезависимой памяти где храним имя контроллера (подчиненное имя)
 
 //метки сетей
 uint8_t used_network;
@@ -43,14 +40,7 @@ uint8_t used_network;
 	void trigger (void);
 	void message_to_LCD1602 (void);
 
-	/*
-	volatile uint8_t WAIT_ACK_TIME_OUT = 0;
-	volatile uint8_t CURRENT_ACTION = 0;
-	*/
-
 	volatile uint8_t CURRENT_ACTION;
-
-
 
 	void time_out_ACK (void);
 	void creat_pack (void);
@@ -122,70 +112,79 @@ uint8_t used_network;
 
 
 
+
 	#ifdef that_device_is_HEAD
-
-		// 1						- PC
-		// 60						- HEADS
-		// 60 * HEAD				- NODES
-		// 60 * NODES				- SENSORS
-		// 3 * (HEADS + NODES)		- SCREENS
-
-		// �������� ������ ��������� ����������� - ������� ������������ ������ �� ������
-
-		//	subgroup	<=		sensors
-		//	subgroups	=>		group
-		//	panels		=>		group
-		//	panels		=>		controller
-		//	panel		<=>		panel_adr
-		//	controller	<=>		controller_adr
-
-		// � ���
-		uint8_t STATUSES[300];
 	
-		// ������ ������� �������� EEPROM
-		uint16_t	SUBGROUP_2_SENSORS_list;		//	size: 4 byte	quantity: 100
-		uint16_t	SUBGROUPS_2_GROUP_list;			//	size: 1 byte	quantity: 100
-		uint16_t	PANELS_2_GROUP_list;			//	size: 1 byte	quantity: 100
-		uint16_t	PANELS_2_CONTROLLER_list;		//	size: 1 byte	quantity: 100
-		uint16_t	PANEL_2_LOCAL_ADDR_list;		//	size: 1 byte	quantity: 100
-		uint16_t	CONTROLLER_2_LOCAL_ADDR_list;	//	size: 1 byte	quantity: 100
+	// 1						- PC
+	// 60						- HEADS
+	// 60 * HEAD				- NODES
+	// 60 * NODES				- SENSORS
+	// 3 * (HEADS + NODES)		- SCREENS
 
-		// ������ ������� �������� EEPROM
-		#define	SUBGROUP_2_SENSORS_list			0x0000		//	size: 4 byte	quantity: 100
-		#define	SUBGROUPS_2_GROUP_list			0x0190		//	size: 1 byte	quantity: 100
-		#define	PANELS_2_GROUP_list				0x01F4		//	size: 1 byte	quantity: 100
-		#define	PANELS_2_CONTROLLER_list		0x0258		//	size: 1 byte	quantity: 100
-		#define	PANEL_2_LOCAL_ADDR_list			0x02BC		//	size: 1 byte	quantity: 100
-		#define	CONTROLLER_2_LOCAL_ADDR_list	0x0320		//	size: 1 byte	quantity: 100
+	// Основная задача головного контроллера - вывести обработанные данные на панели
+
+
+
+	//	subgroup	<=		sensors
+	//	subgroups	=>		group
+	//	panels		=>		group
+	//	panels		=>		controller
+	//	panel		<=>		panel_adr
+	//	controller	<=>		controller_adr
+
+
+	// В ОЗУ
+	uint8_t STATUSES[300];
+/*
+	// адреса началов списковВ EEPROM
+	uint16_t	SUBGROUP_2_SENSORS_list;		//	size: 4 byte	quantity: 100
+	uint16_t	SUBGROUPS_2_GROUP_list;			//	size: 1 byte	quantity: 100
+	uint16_t	PANELS_2_GROUP_list;			//	size: 1 byte	quantity: 100
+	uint16_t	PANELS_2_CONTROLLER_list;		//	size: 1 byte	quantity: 100
+	uint16_t	PANEL_2_LOCAL_ADDR_list;		//	size: 1 byte	quantity: 100
+	uint16_t	CONTROLLER_2_LOCAL_ADDR_list;	//	size: 1 byte	quantity: 100
+*/
+
+	//адреса
+	#define EEPROM_ADR	0x01						//	адрес ячейки в энергонезависимой памяти где храним имя контроллера (подчиненное имя)
+
+	// адреса началов списковВ EEPROM
+	#define	SUBGROUP_2_SENSORS_list			0x0000		//	size: 4 byte	quantity: 100
+	#define	SUBGROUPS_2_GROUP_list			0x0190		//	size: 1 byte	quantity: 100
+	#define	PANELS_2_GROUP_list				0x01F4		//	size: 1 byte	quantity: 100
+	#define	PANELS_2_CONTROLLER_list		0x0258		//	size: 1 byte	quantity: 100
+	#define	PANEL_2_LOCAL_ADDR_list			0x02BC		//	size: 1 byte	quantity: 100
+	#define	CONTROLLER_2_LOCAL_ADDR_list	0x0320		//	size: 1 byte	quantity: 100
 
 	#else
 	#endif
 
 
-//=========================================================
-uint8_t UPDATE_STAGE;
+	//=========================================================
+	uint8_t UPDATE_STAGE;
 
-#define UPDATE_START				0	//	��������
-#define GROUP_DETECTING				1	//	�������� ������
-#define SUBGROUP_DETECTING			2	//	���������� ��������� (������� ������� ��� - ������� �����������)
-#define STATUS_CALCULATING			3	//	������� ���������� ��������� ���� � ������ �� ��������� ���������� ��������� ���� � ��������� (������� ������� ��� - ������� �����������)
-#define PANEL_DETECTING				4	//	���������� ������ �� ������� ����� ������� ���������
-#define CONTROLLER_DETECTING		5	//	���������� ������ �� ������� ����� ������� ���������
-#define LOCAL_ADDRESSES_DETECTING	6	//	����������� ���������� ������ ����������� � ���������� ������ ������ (� ������� �����������)
-#define INFO_UPDATING				7	//	�������� ��������� �� ������
-#define UPDATE_FINISH				8	//	���������� ���������� �� ������� �����������
-//=========================================================
-
-
-#define FIRST_SENSOR	0
-#define LAST_SENSOR		1
-#define EMPTY			0xFF
+	#define UPDATE_START				0	//	начинаем
+	#define GROUP_DETECTING				1	//	выбираем группу
+	#define SUBGROUP_DETECTING			2	//	определяем подгруппу (заходим столько раз - сколько потребуется)
+	#define STATUS_CALCULATING			3	//	считаем количество свободных мест в группе на основании количества свободных мест в подгруппе (заходим столько раз - сколько потребуется)
+	#define PANEL_DETECTING				4	//	определяем панель на которую нужно вывести результат
+	#define CONTROLLER_DETECTING		5	//	определяем панель на которую нужно вывести результат
+	#define LOCAL_ADDRESSES_DETECTING	6	//	определение локального адреса контроллера и локального адреса панели (в подсети контроллера)
+	#define INFO_UPDATING				7	//	отправка сообщения на панель
+	#define UPDATE_FINISH				8	//	обновление информации на панелях произведено
+	//=========================================================
 
 
-#define panels			100
-#define subgroups		100
-#define controllers		100
-#define groups			100
+	#define FIRST_SENSOR	0
+	#define LAST_SENSOR		1
+	#define EMPTY			0xFF
+
+
+	#define panels			100
+	#define subgroups		100
+	#define controllers		100
+	#define groups			100
+
 
 
 
