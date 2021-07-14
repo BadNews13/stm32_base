@@ -16,9 +16,15 @@
 #define FLASH_KEY2 ((uint32_t)0xCDEF89AB)
 
 #define Page_size 			0x3FF						//	Размер страницы 1024 byte (0 - 1023)
-#define Page_30				((uint32_t)0x08007800)		//	Page 30 	0x0800 7800 - 0x0800 7BFF 		1 KB
-#define Page_31				((uint32_t)0x08007C00)		//	Page 31 	0x0800 7C00 - 0x0800 7FFF 		1 KB
-volatile uint32_t Page[32];								//	массив для работы со страницей Flash памяти
+#define Page_30_ADDR		((uint32_t)0x08007800)		//	Page 30 	0x0800 7800 - 0x0800 7BFF 		1 KB
+#define Page_31_ADDR				((uint32_t)0x08007C00)		//	Page 31 	0x0800 7C00 - 0x0800 7FFF 		1 KB
+
+#define size_of_word 		8
+#define WORD_CNT 			Page_size/size_of_word
+#define WORD_ADDR_OFFSET	0x4
+
+
+//volatile uint32_t Page[128];							//	массив для работы со страницей Flash памяти
 
 
 void FLASH_Init(void);

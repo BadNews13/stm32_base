@@ -10,6 +10,29 @@ void FLASH_Init(void) {
 	FLASH_PrefetchBufferCmd( FLASH_PrefetchBuffer_Enable);
 	/* Flash 2 wait state */
 	FLASH_SetLatency( FLASH_Latency_2);
+
+
+
+
+	/*
+			uint32_t word;
+			FLASH_Unlock();
+
+			FLASH_Erase_Page(((uint32_t)0x08007C00));	//	стираем все страницу (указывая начало)
+
+			word = 0x00000000;
+			write_word((uint32_t)(0x08007C00), word);	//	пишем слово в начало страницы
+
+			word = 0x01020304;
+			write_word((uint32_t)(0x08007C04), word);	//	пишем слово в пишем в следующие 32 бита (4 байта)
+
+			word = 0x05060708;
+			write_word((uint32_t)(0x08007C08), word);	//	пишем слово в пишем в следующие 32 бита (4 байта)
+
+			FLASH_Lock();
+	*/
+
+
 }
 
 
@@ -59,11 +82,6 @@ void Internal_Flash_Write(unsigned char* data, uint32_t address, unsigned int co
 	if (FLASH->SR & FLASH_SR_EOP) {FLASH->SR = FLASH_SR_EOP;}
 
 	FLASH->CR |= FLASH_CR_PG;
-
-//	for (uint8_t i = 0; i < count; i++) {}
-
-
-
 
 	for (i = 0; i < count; i += 2)
 	{

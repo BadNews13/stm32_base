@@ -117,19 +117,26 @@ void pack_from_uart_1_exe (void)
 							adr_in_uart_1 = p_data[0];							//	запишем новоый адрес в рабочую переменную
 			//				eeprom_update_byte(EEPROM_ADR,RS232_address);		//	адрес в сети RS485 (основная рабочая сеть системы)
 
-							uint8_t cnt_word = 32;
-							for (uint8_t i = 0; i < cnt_word; i++)	{Page[i] = flash_read(Page_30);}	//	считываем страницу
+							uint32_t Page[WORD_CNT];
 
-							Page[0] = 3;	//p_data[0]<<24;													//	записываем новый адрес данного устройства
+							for (uint8_t i = 0; i < WORD_CNT; i++)								//	считываем страницу
+							{
+								Page[i] = flash_read(Page_30_ADDR + (i * WORD_ADDR_OFFSET));	//	считываем по словам
+							}
+
+							CLEAR_BIT	(Page[0], 0xFF<<(3*8));											//	стираем адрес нового устройства
+							SET_BIT		(Page[0], p_data[0]<<(3*8));									//	записываем новый адрес данного устройства
+
 							FLASH_Unlock();																//	разблокируем память
-							FLASH_Erase_Page(Page_30);													//	стираем память
+							FLASH_Erase_Page(Page_30_ADDR);													//	стираем память
 
-							uint8_t data[10];
-									data[0]	 = p_data[0];
+							for(uint8_t i = 0; i < WORD_CNT; i++)										//	записываем всю страницу обратно в память
+							{
+								write_word((uint32_t)(Page_30_ADDR + (i*WORD_ADDR_OFFSET)), Page[i]);	//	пишем слово в начало страницы
+							}
 
-							Internal_Flash_Write(&data[0], Page_30, 10);								//	записываем всю страницу обратно в память
+	//						Internal_Flash_Write(&data[0], Page_30, 10);
 							FLASH_Lock();																//	блокируем память
-
 
 						}
 						break;
