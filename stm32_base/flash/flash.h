@@ -18,7 +18,6 @@
 #define Page_size 			0x3FF						//	Размер страницы 1024 byte (0 - 1023)
 #define Page_30				((uint32_t)0x08007800)		//	Page 30 	0x0800 7800 - 0x0800 7BFF 		1 KB
 #define Page_31				((uint32_t)0x08007C00)		//	Page 31 	0x0800 7C00 - 0x0800 7FFF 		1 KB
-#define accessible_flash 	Page_30						//	будем считать, что нам доступны только две последние страницы памяти
 volatile uint32_t Page[32];								//	массив для работы со страницей Flash памяти
 
 
@@ -131,5 +130,7 @@ void FLASH_PrefetchBufferCmd(uint32_t FLASH_PrefetchBuffer);
 									  ((FLAG) == FLASH_FLAG_BANK1_PGERR) || ((FLAG) == FLASH_FLAG_BANK1_WRPRTERR) || \
 									  ((FLAG) == FLASH_FLAG_OPTERR))
 #endif
+
+void write_word (uint32_t Address, uint32_t Data);
 
 #endif /* FLASH_FLASH_H_ */

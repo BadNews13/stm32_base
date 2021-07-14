@@ -106,41 +106,55 @@ int main(void)
 
 //	RTOS_SetTask(send_byte_to_uart, 1000, 0);
 
-	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
+//	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
+
+
+		FLASH_Unlock();
+
+		FLASH_Erase_Page(((uint32_t)0x08007C00));	//	стираем все страницу (указывая начало)
+
+		uint32_t word = 0x00000000;
+		write_word((uint32_t)(0x08007C00), word);	//	пишем слово в начало страницы
+
+		word = 0x01020304;
+		write_word((uint32_t)(0x08007C04), word);	//	пишем слово в пишем в следующие 32 бита (4 байта)
+
+		word = 0x05060708;
+		write_word((uint32_t)(0x08007C08), word);	//	пишем слово в пишем в следующие 32 бита (4 байта)
+
+		FLASH_Lock();
+
+
+	for (uint8_t i = 0; i < 32; i++)
+	{
+		uint32_t tmp_b = flash_read(Page_31 + (i*4));	// adr + (32*i)
+
+		uint8_t pack[4];
+		pack[3] = tmp_b;
+		pack[2] = tmp_b >> (8 * 1);
+		pack[1] = tmp_b >> (8 * 2);
+		pack[0] = tmp_b >> (8 * 3);
+
+		for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(pack[j]);}
+
+		delay_ms(100);
+	}
 
 
 /*
-	for (uint8_t i = 0; i < 32; i++)	{Page[i] = flash_read(Page_30);}	//	считываем страницу
-*/
-/*
-	for (uint8_t i = 0; i < 32; i++)
-	{
-		uint32_t tmp_b = flash_read(Page_30 + (0x20*i));	//+(32*i)
-		for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(tmp_b >> (8 * j));}
-		delay_ms(100);
-	}
-	delay_ms(100);
-	put_byte_UART1(0x00);
-	delay_ms(100);
-	for (uint8_t i = 0; i < 32; i++)
-	{
-		uint32_t tmp_b = flash_read(Page_31 + (0x20*i));	//+(32*i)
-		for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(tmp_b >> (8 * j));}
-		delay_ms(100);
-	}
-*/
-
-
 	uint32_t  byte_tmp = flash_read(Page_30);
 	for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(byte_tmp >> (8 * j));}
 
 	adr_in_uart_1 = byte_tmp;//>>24;
+	*/
+/*
 	delay_ms(100);
 	put_byte_UART1(adr_in_uart_1);
 	put_byte_UART2(adr_in_uart_2);
-
-
+	put_byte_UART1(0x01);
+	put_byte_UART2(0x02);
+*/
 
 	while(1)
 	{
