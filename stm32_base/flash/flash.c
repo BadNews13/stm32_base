@@ -94,7 +94,7 @@ void Internal_Flash_Write(unsigned char* data, uint32_t address, unsigned int co
 	FLASH->CR &= ~(FLASH_CR_PG);
 }
 
-uint32_t flash_read(uint32_t address)
+uint32_t read_word(uint32_t address)
 {
 	return (*(__IO uint32_t*) address);
 }
@@ -141,55 +141,40 @@ void FLASH_SetLatency(uint32_t FLASH_Latency)
 }
 
 
-void write_word (uint32_t Address, uint32_t Data)
+void write_word (uint32_t Address, uint32_t *Data, uint8_t cnt_of_bytes)
 {
-/*
-	Address = 	0x08007C00;
-	Data = 		0x01020304;
-*/
+	uint8_t cnt_of_word = cnt_of_bytes / 4;
+	uint32_t tmp;
 
-//	FLASH->CR &= ~FLASH_CR_PER;	 			//	Сбрасываем бит стирания одной страницы
-uint16_t tmp;
-//FLASH->AR = Address; 				//	Задаем её адрес
 
-	while (FLASH->SR & FLASH_SR_BSY);
-	if (FLASH->SR & FLASH_SR_EOP) {FLASH->SR = FLASH_SR_EOP;}	//	сбрасываем флаг завершения операции
 
-    /* if the previous operation is completed, proceed to program the new first
-    half word */
-    FLASH->CR |= CR_PG_Set;		//	устанавливаем флаг - программирование flash
+	for (uint8_t i = 0; i < cnt_of_word; i++)
+	{
+		while (FLASH->SR & FLASH_SR_BSY);
+		if (FLASH->SR & FLASH_SR_EOP) {FLASH->SR = FLASH_SR_EOP;}	//	сбрасываем флаг завершения операции
 
-    *(__IO uint16_t*)Address = (uint16_t)Data;
+	    /* if the previous operation is completed, proceed to program the new first
+	    half word */
+	    FLASH->CR |= CR_PG_Set;		//	устанавливаем флаг - программирование flash
 
-	while (!(FLASH->SR & FLASH_SR_EOP));
-	FLASH->SR = FLASH_SR_EOP;
 
-    tmp = Address + 2;
-    *(__IO uint16_t*) tmp = (uint16_t)(Data>>16);
+	    tmp = Address + (0x4 *i);
+	    *(__IO uint16_t*) tmp = (uint16_t)Data[i];
 
-	while (!(FLASH->SR & FLASH_SR_EOP));	//	ждем завершения операции
-	FLASH->SR = FLASH_SR_EOP;				//	сбрасываем флаг завершения операции
+		while (!(FLASH->SR & FLASH_SR_EOP));
+		FLASH->SR = FLASH_SR_EOP;
 
-//===========================================================
+
+
+	    tmp = Address + (0x4 *i) + 2;
+	    *(__IO uint16_t*) tmp = (uint16_t)(Data[i]>>16);
+
+		while (!(FLASH->SR & FLASH_SR_EOP));	//	ждем завершения операции
+		FLASH->SR = FLASH_SR_EOP;				//	сбрасываем флаг завершения операции
+	}
+
+
 
    return;
 }
-/*
-void kd (void)
-{
-	while (FLASH->SR & FLASH_SR_BSY);		//	Ожидаем готовности флеша к записи
-	if (FLASH->SR & FLASH_SR_EOP) {FLASH->SR = FLASH_SR_EOP;}
-
-	FLASH->CR|= FLASH_CR_PER; 				//	Устанавливаем бит стирания одной страницы
-	FLASH->AR = address; 					//	Задаем её адрес
-	FLASH->CR|= FLASH_CR_STRT; 				//	Запускаем стирание
-
-	while (FLASH->SR & FLASH_SR_BSY);		//	Ждем пока страница сотрется
-
-	FLASH->CR &= ~FLASH_CR_PER;	 			//	Сбрасываем бит стирания одной страницы
-
-	if(FLASH->SR & FLASH_SR_EOP)	{FLASH->SR |= FLASH_SR_EOP;	return 1;}	//	операция завершена, очищаем флаг
-	else							{return 1;}
-}
-*/
 

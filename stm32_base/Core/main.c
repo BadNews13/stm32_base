@@ -109,11 +109,64 @@ int main(void)
 	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
 
+/*
+			uint32_t word;
+			FLASH_Unlock();
+
+			FLASH_Erase_Page(((uint32_t)0x08007C00));	//	стираем все страницу (указывая начало)
+
+			word = 0x00000000;
+			write_word((uint32_t)(0x08007C00), word);	//	пишем слово в начало страницы
+
+			word = 0x01020304;
+			write_word((uint32_t)(0x08007C04), word);	//	пишем слово в пишем в следующие 32 бита (4 байта)
+
+			word = 0x05060708;
+			write_word((uint32_t)(0x08007C08), word);	//	пишем слово в пишем в следующие 32 бита (4 байта)
+
+			FLASH_Lock();
+*/
 
 
+
+			FLASH_Unlock();
+			FLASH_Erase_Page(((uint32_t)0x08007C00));	//	стираем все страницу (указывая начало)
+			uint8_t byte_[20];
+
+
+			for (uint8_t i = 0; i < 20; i++)	{byte_[i] = 0xA0 +i;}
+
+
+			write_word((uint32_t)(0x08007C04), &byte_[0], 20);	//	пишем слово в пишем в следующие 32 бита (4 байта)
+			FLASH_Lock();
+
+			uint32_t tmp_page[20];
+			for (uint8_t i = 0; i < 10; i++)
+			{
+				tmp_page[i] = read_word ( Page_31_ADDR + (i*4) );
+
+				uint8_t pack[4];
+				pack[3] = tmp_page[i];
+				pack[2] = tmp_page[i] >> (8 * 1);
+				pack[1] = tmp_page[i] >> (8 * 2);
+				pack[0] = tmp_page[i] >> (8 * 3);
+
+				for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(pack[j]);}
+				delay_ms(100);
+			}
+
+			uint8_t *byte = &tmp_page[0];
+			for (uint8_t i = 0; i < 20; i++)
+			{
+				put_byte_UART1(byte[i]);
+				delay_ms(100);
+			}
+
+
+/*
 	for (uint8_t i = 0; i < 32; i++)
 	{
-		uint32_t tmp_b = flash_read(Page_30_ADDR + (i*4));	// adr + (32*i)
+		uint32_t tmp_b = read_word(Page_31_ADDR + (i*4));	// adr + (32*i)
 
 		uint8_t pack[4];
 		pack[3] = tmp_b;
@@ -126,11 +179,11 @@ int main(void)
 		delay_ms(100);
 	}
 
+*/
 
-
-	uint32_t  byte_tmp = flash_read(Page_30_ADDR);
+	uint32_t  byte_tmp = read_word(Page_30_ADDR);
 //	for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(byte_tmp >> (8 * j));}
-	adr_in_uart_1 = byte_tmp>>(8*3);//>>24;
+	adr_in_uart_1 = byte_tmp>>(8*3);
 
 /*
 	delay_ms(100);

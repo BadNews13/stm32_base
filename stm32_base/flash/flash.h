@@ -32,7 +32,7 @@ void FLASH_Unlock(void);	//	разблокировать память
 void FLASH_Lock(void);		//	заблокировать память
 _Bool FLASH_Erase_Page(uint32_t address);
 void Internal_Flash_Write(unsigned char* data, uint32_t address, unsigned int count);	//void Internal_Flash_Write(unsigned char* data, unsigned int address, unsigned int count);
-uint32_t flash_read(uint32_t address);
+uint32_t read_word(uint32_t address);
 
 _Bool flash_ready(void);	//	Готова ли память к следующей оперции (ждем завершения операции)
 _Bool check_EOP(void);
@@ -137,6 +137,7 @@ void FLASH_PrefetchBufferCmd(uint32_t FLASH_PrefetchBuffer);
 									  ((FLAG) == FLASH_FLAG_OPTERR))
 #endif
 
-void write_word (uint32_t Address, uint32_t Data);
+//void write_word (uint32_t Address, uint32_t Data);
+void write_word (uint32_t Address, uint32_t *Data, uint8_t cnt_of_bytes);
 
 #endif /* FLASH_FLASH_H_ */
