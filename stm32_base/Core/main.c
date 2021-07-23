@@ -65,29 +65,6 @@ int main(void)
 
 
 
-//======================================================================
-/*
-//	FLASH_Init();
-	FLASH_Unlock();
-	FLASH_Erase_Page(Page_31);
-
-	uint32_t byte_4 = flash_read(Page_31);
-
-	for (uint8_t i = 0; i < 4; i++)		{put_byte_UART1(byte_4 >> (8 * i));}
-
-	uint8_t size = 10;
-	uint8_t data[size];	for (uint8_t i = 0; i < size; i++)	{data[i] = 0x44+i;}
-
-	Internal_Flash_Write(&data[0], Page_31, size);
-	FLASH_Lock();
-
-	delay_ms(500);
-	byte_4 = flash_read(Page_31);
-
-	for (uint8_t i = 0; i < 4; i++)		{put_byte_UART1(byte_4 >> (8 * i));}
-*/
-//======================================================================
-
 
 /*
 //	Для светодиода на плате
@@ -108,20 +85,7 @@ int main(void)
 
 	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
-
-
-/*			//	работает
-			FLASH_Unlock();
-			FLASH_Erase_Page(((uint32_t)0x08007C00));	//	стираем все страницу (указывая начало)
-
-			uint8_t byte_[Page_size];
-			for (uint8_t i = 0; i < 20; i++)	{byte_[i] = 0xA0 +i;}
-
-			write_Page((uint32_t)(Page_31_ADDR +4), &byte_[0]);	//	пишем слово в пишем в следующие 32 бита (4 байта) (max 55)
-			FLASH_Lock();
-*/
-
-
+/*
 			uint32_t tmp_page[20];
 			for (uint8_t i = 0; i < 10; i++)
 			{
@@ -143,7 +107,49 @@ int main(void)
 				put_byte_UART1(byte[i]);
 				delay_ms(100);
 			}
+*/
 
+/*
+	FLASH_Unlock();								//	разблокируем память
+	FLASH_Erase_Page((uint32_t)LISTs);			//	стираем память
+	FLASH_Lock();								//	блокируем память
+*/
+
+
+
+
+	uint8_t test_pack[1024];
+	for (uint16_t  i = 0; i < 1024; i++)	{test_pack[i] = i;}
+
+	FLASH_Unlock();								//	разблокируем память
+	FLASH_Erase_Page((uint32_t)LISTs);			//	стираем память
+	write_Page((uint32_t)(LISTs), &test_pack[0]);	//	пишем слово в пишем в следующие 32 бита (4 байта) (max 55)
+	FLASH_Lock();								//	блокируем память
+
+
+			uint32_t tmp_lists[32];
+			for (uint8_t i = 0; i < 0xFF; i++)		//	т.к. по 4 байты выводим то код-во циклов должно быть 255
+			{
+				tmp_lists[i] = read_word ( LISTs + (i*4) );
+
+				uint8_t pack[4];
+				pack[0] = tmp_lists[i];
+				pack[1] = tmp_lists[i] >> (8 * 1);
+				pack[2] = tmp_lists[i] >> (8 * 2);
+				pack[3] = tmp_lists[i] >> (8 * 3);
+
+				static cnt_bytes = 0;
+				for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(pack[j]); cnt_bytes++;}
+				if(cnt_bytes == 16)					{delay_ms(100); cnt_bytes = 0;}
+			}
+
+/*
+			uint8_t *byte = &tmp_lists[0];
+			for(uint8_t i = 0; i < 32; i++)
+			{
+				for (uint16_t j = 0; j < 32; j++)		{put_byte_UART1(byte[j]);}
+			}
+*/
 
 /*
 	for (uint8_t i = 0; i < 32; i++)
@@ -162,10 +168,10 @@ int main(void)
 	}
 
 */
-
+			uint8_t *byte;
 	uint32_t  byte_tmp = read_word(Page_30_ADDR);
-//	for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(byte_tmp >> (8 * j));}
-	adr_in_uart_1 = byte_tmp>>(8*3);
+	byte = &byte_tmp;
+	adr_in_uart_1 = byte[0];
 
 /*
 	delay_ms(100);

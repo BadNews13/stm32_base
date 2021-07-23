@@ -179,7 +179,8 @@ void write_Page (uint32_t Address, uint32_t *Data )
 {
 //	uint16_t cnt_of_word = Page_size / 4;	//	четыре байта в одном слове. Не кратный хвост не обрабатывается (т.к. деление на цело)
 
-	uint8_t cnt_of_word = Page_size / 32; 	// столько 32-х битных слов в 1024 байтной странице
+//	uint8_t cnt_of_word = Page_size / 32; 	// столько 32-х битных слов в 1024 байтной странице
+	uint8_t cnt_of_word = 0xFF;
 
 	uint32_t Address_for_half_word;
 

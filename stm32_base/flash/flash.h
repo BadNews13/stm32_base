@@ -15,13 +15,14 @@
 #define FLASH_KEY1 ((uint32_t)0x45670123)
 #define FLASH_KEY2 ((uint32_t)0xCDEF89AB)
 
-#define Page_size 			0x3FE						//	Размер страницы 1024 byte (0 - 1023)
+#define Page_size 			0x400	//0x3FE				//	Размер страницы 1024 byte (0 - 1023)
 #define Page_30_ADDR		((uint32_t)0x08007800)		//	Page 30 	0x0800 7800 - 0x0800 7BFF 		1 KB
 #define Page_31_ADDR		((uint32_t)0x08007C00)		//	Page 31 	0x0800 7C00 - 0x0800 7FFF 		1 KB
 
-#define size_of_word 		8
-#define WORD_CNT 			Page_size/size_of_word
-#define WORD_ADDR_OFFSET	0x4
+
+#define size_of_word 		4								//	32 bit / 8 bit = 4 byte
+#define WORD_CNT 			(Page_size/size_of_word)-1		//	1024 byte / 4 byte  = 256 byte -1  (т.к. существует элемент array[0])
+#define WORD_ADDR_OFFSET	size_of_word 					//	0x4	(т.к. 4 байта на слово)
 
 
 //volatile uint32_t Page[128];							//	массив для работы со страницей Flash памяти
