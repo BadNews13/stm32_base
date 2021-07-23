@@ -113,22 +113,25 @@ void pack_from_uart_1_exe (void)
 						case NO_PARAMETERS:
 						{
 							adr_in_uart_1 = p_data[0];							//	запишем новоый адрес в рабочую переменную
+							uint32_t Page[WORD_CNT];							//	создаем массив - страницу (нужно считать данные из памяти, чтобы потом после стирания страницы записать их вновь в память)
 
-							uint32_t Page[WORD_CNT];
-
+							FLASH_Unlock();
 							//	считываем страницу
 							for (uint8_t i = 0; i < WORD_CNT; i++)		{Page[i] = read_word(Page_30_ADDR + (i * WORD_ADDR_OFFSET));}	//	считываем по словам
 
-							CLEAR_BIT	(Page[0], 0xFF<<(3*8));											//	стираем адрес нового устройства
-							SET_BIT		(Page[0], p_data[0]<<(3*8));									//	записываем новый адрес данного устройства
+							uint8_t *byte = &Page[0];									//	для работы со страницей по байтам
 
-							FLASH_Unlock();																//	разблокируем память
-							FLASH_Erase_Page(Page_30_ADDR);												//	стираем память
+							CLEAR_BIT	(Page[0], 0xFF<<(3*8));							//	стираем адрес нового устройства
+							SET_BIT		(Page[0], p_data[0]<<(3*8));					//	записываем новый адрес данного устройства
 
-							//	записываем всю страницу обратно в память
-	//						for(uint8_t i = 0; i < WORD_CNT; i++)		{write_word((uint32_t)(Page_30_ADDR + (i*WORD_ADDR_OFFSET)), Page[i]);}
+							byte[0] = p_data[0];
+																						//	разблокируем память
+							FLASH_Erase_Page((uint32_t)Page_30_ADDR);					//	стираем память
 
-							FLASH_Lock();																//	блокируем память
+							write_Page((uint32_t)(Page_30_ADDR), &byte[0]);				//	пишем слово в пишем в следующие 32 бита (4 байта) (max 55)
+
+							FLASH_Lock();												//	блокируем память
+
 						}
 						break;
 

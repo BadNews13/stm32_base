@@ -15,9 +15,9 @@
 #define FLASH_KEY1 ((uint32_t)0x45670123)
 #define FLASH_KEY2 ((uint32_t)0xCDEF89AB)
 
-#define Page_size 			0x3FF						//	Размер страницы 1024 byte (0 - 1023)
+#define Page_size 			0x3FE						//	Размер страницы 1024 byte (0 - 1023)
 #define Page_30_ADDR		((uint32_t)0x08007800)		//	Page 30 	0x0800 7800 - 0x0800 7BFF 		1 KB
-#define Page_31_ADDR				((uint32_t)0x08007C00)		//	Page 31 	0x0800 7C00 - 0x0800 7FFF 		1 KB
+#define Page_31_ADDR		((uint32_t)0x08007C00)		//	Page 31 	0x0800 7C00 - 0x0800 7FFF 		1 KB
 
 #define size_of_word 		8
 #define WORD_CNT 			Page_size/size_of_word
@@ -138,6 +138,7 @@ void FLASH_PrefetchBufferCmd(uint32_t FLASH_PrefetchBuffer);
 #endif
 
 //void write_word (uint32_t Address, uint32_t Data);
-void write_word (uint32_t Address, uint32_t *Data, uint8_t cnt_of_bytes);
+//void write_word (uint32_t Address, uint32_t *Data, uint16_t cnt_of_bytes);
+void write_Page (uint32_t Address, uint32_t *Data );
 
 #endif /* FLASH_FLASH_H_ */

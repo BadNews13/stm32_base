@@ -141,12 +141,10 @@ void FLASH_SetLatency(uint32_t FLASH_Latency)
 }
 
 
-void write_word (uint32_t Address, uint32_t *Data, uint8_t cnt_of_bytes)
+void write_word (uint32_t Address, uint32_t *Data, uint16_t cnt_of_bytes)
 {
-	uint8_t cnt_of_word = cnt_of_bytes / 4;
-	uint32_t tmp;
-
-
+	uint16_t cnt_of_word = cnt_of_bytes / 4;	//	четыре байта в одном слове. Не кратный хвост не обрабатывается (т.к. деление на цело)
+	uint32_t Address_for_half_word;
 
 	for (uint8_t i = 0; i < cnt_of_word; i++)
 	{
@@ -157,23 +155,61 @@ void write_word (uint32_t Address, uint32_t *Data, uint8_t cnt_of_bytes)
 	    half word */
 	    FLASH->CR |= CR_PG_Set;		//	устанавливаем флаг - программирование flash
 
-
-	    tmp = Address + (0x4 *i);
-	    *(__IO uint16_t*) tmp = (uint16_t)Data[i];
+//======First half-word======================================================================================
+	    Address_for_half_word = Address + (0x4 *i);
+	    *(__IO uint16_t*) Address_for_half_word = (uint16_t)Data[i];
 
 		while (!(FLASH->SR & FLASH_SR_EOP));
 		FLASH->SR = FLASH_SR_EOP;
+//===========================================================================================================
 
-
-
-	    tmp = Address + (0x4 *i) + 2;
-	    *(__IO uint16_t*) tmp = (uint16_t)(Data[i]>>16);
+//======Second half-word=====================================================================================
+		Address_for_half_word = Address + (0x4 *i) + 2;
+	    *(__IO uint16_t*) Address_for_half_word = (uint16_t)(Data[i]>>16);
 
 		while (!(FLASH->SR & FLASH_SR_EOP));	//	ждем завершения операции
 		FLASH->SR = FLASH_SR_EOP;				//	сбрасываем флаг завершения операции
+//===========================================================================================================
 	}
 
+   return;
+}
 
+void write_Page (uint32_t Address, uint32_t *Data )
+{
+//	uint16_t cnt_of_word = Page_size / 4;	//	четыре байта в одном слове. Не кратный хвост не обрабатывается (т.к. деление на цело)
+
+	uint8_t cnt_of_word = Page_size / 32; 	// столько 32-х битных слов в 1024 байтной странице
+
+	uint32_t Address_for_half_word;
+
+	for (uint8_t i = 0; i < cnt_of_word; i++)
+	{
+		while (FLASH->SR & FLASH_SR_BSY);
+		if (FLASH->SR & FLASH_SR_EOP) {FLASH->SR = FLASH_SR_EOP;}	//	сбрасываем флаг завершения операции
+
+	    /* if the previous operation is completed, proceed to program the new first
+	    half word */
+	    FLASH->CR |= CR_PG_Set;		//	устанавливаем флаг - программирование flash
+
+//======First half-word======================================================================================
+	    Address_for_half_word = Address + (0x4 *i);
+	    *(__IO uint16_t*) Address_for_half_word = (uint16_t)Data[i];
+
+		while (!(FLASH->SR & FLASH_SR_EOP));
+		FLASH->SR = FLASH_SR_EOP;
+//===========================================================================================================
+
+//======Second half-word=====================================================================================
+		Address_for_half_word = Address + (0x4 *i) + 2;
+	    *(__IO uint16_t*) Address_for_half_word = (uint16_t)(Data[i]>>16);
+
+		while (!(FLASH->SR & FLASH_SR_EOP));	//	ждем завершения операции
+		FLASH->SR = FLASH_SR_EOP;				//	сбрасываем флаг завершения операции
+//===========================================================================================================
+
+		FLASH->CR &= CR_PG_Reset;
+	}
 
    return;
 }

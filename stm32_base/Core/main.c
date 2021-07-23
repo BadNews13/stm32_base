@@ -109,36 +109,18 @@ int main(void)
 	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
 
-/*
-			uint32_t word;
-			FLASH_Unlock();
 
+/*			//	работает
+			FLASH_Unlock();
 			FLASH_Erase_Page(((uint32_t)0x08007C00));	//	стираем все страницу (указывая начало)
 
-			word = 0x00000000;
-			write_word((uint32_t)(0x08007C00), word);	//	пишем слово в начало страницы
+			uint8_t byte_[Page_size];
+			for (uint8_t i = 0; i < 20; i++)	{byte_[i] = 0xA0 +i;}
 
-			word = 0x01020304;
-			write_word((uint32_t)(0x08007C04), word);	//	пишем слово в пишем в следующие 32 бита (4 байта)
-
-			word = 0x05060708;
-			write_word((uint32_t)(0x08007C08), word);	//	пишем слово в пишем в следующие 32 бита (4 байта)
-
+			write_Page((uint32_t)(Page_31_ADDR +4), &byte_[0]);	//	пишем слово в пишем в следующие 32 бита (4 байта) (max 55)
 			FLASH_Lock();
 */
 
-
-
-			FLASH_Unlock();
-			FLASH_Erase_Page(((uint32_t)0x08007C00));	//	стираем все страницу (указывая начало)
-			uint8_t byte_[20];
-
-
-			for (uint8_t i = 0; i < 20; i++)	{byte_[i] = 0xA0 +i;}
-
-
-			write_word((uint32_t)(0x08007C04), &byte_[0], 20);	//	пишем слово в пишем в следующие 32 бита (4 байта)
-			FLASH_Lock();
 
 			uint32_t tmp_page[20];
 			for (uint8_t i = 0; i < 10; i++)
@@ -195,7 +177,7 @@ int main(void)
 
 
 
-
+	put_byte_UART1(adr_in_uart_1);
 
 
 	while(1)
