@@ -18,7 +18,8 @@ void pack_from_uart_1_exe (void);		//	обрабтать пакет из сет�
 void pack_from_uart_2_exe (void);		//	обрабтать пакет из сети 2
 
 uint8_t check_hop(uint8_t from_NET);	//	проверяет нужно ли пересылать дальше пакет или обрабатываем
-void prepare_ACK (void);				//	готови ACK
+//void prepare_ACK (void);				//	готови ACK
+void prepare_ACK (uint8_t *route, uint8_t cmd, uint8_t prm);
 
 void system_reset(void);
 

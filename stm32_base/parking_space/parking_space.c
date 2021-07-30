@@ -495,14 +495,13 @@ void trigger (void)	//	входное значение - желаемое дей
 }
 
 
-
 void message_to_LCD1602 (void)
 {
 
 	uint8_t	count_live_devices = 0;			uint8_t	count_free_places = 0;
-	char	res_live[1];					char	res_free[1];
+	char	result_live[1];					char	result_free[1];
 
-	for (uint8_t i = 2; i<MAX_DEVICES; i++)
+	for (uint8_t i = 2; i < MAX_DEVICES; i++)
 	{
 	//	if (i != CURRENT_DEVICE)							//	проходим по все устройствам из памяти кроме текущего, т.к. текущий - экран
 		{
@@ -515,21 +514,55 @@ void message_to_LCD1602 (void)
 	}
 
 
-	utoa(count_live_devices, res_live, 10);
-	utoa(count_free_places, res_free, 10);		//	берет значение из переменной count_free_places, приводит его в десятичный вид и записывает в строку res_free
+	utoa(count_live_devices, 	result_live, 	10);
+	utoa(count_free_places, 	result_free, 	10);		//	берет значение из переменной count_free_places, приводит его в десятичный вид и записывает в строку res_free
 
-	char res_all[6];
+	char result_all[6];
 
 
-	res_all[0] = res_free[0];	// res_free[0];	//	кол-во свободных мест с живых датчиков
-	res_all[1] = '/';
-	res_all[2] = res_live[0];	//	кол-во живый датчиков
+	result_all[0] = result_free[0];	// res_free[0];	//	кол-во свободных мест с живых датчиков
+	result_all[1] = '/';
+	result_all[2] = result_live[0];	//	кол-во живый датчиков
 
-	for (uint8_t i = 3; i < 6; i++)	{res_all[i] = 0x00;}	//	кастыль для подчистки хвоста строки
+	for (uint8_t i = 3; i < 6; i++)	{result_all[i] = 0x00;}	//	кастыль для подчистки хвоста строки
 
 	LCD_Command(0x01);		//	очистка дисплея					(LCD_CLEAR)
 	delay_ms(2);			//	долгая операция
-	LCD_Command(LCD_SETDDRAMADDR | SECONDSTRING);	//	писать с нулевого адреса
-	LCDsendString(res_all);
+//	LCD_Command(LCD_SETDDRAMADDR | SECONDSTRING);	//	писать с нулевого адреса
+//	LCDsendString(result_all);
 
+	//= выводим на превой строке байт с живыми устройствами ==================================================
+	char string_lives[16];
+	char string_statuses[16];
+
+	for (uint8_t i = 0; i < 8; i++)
+	{
+		if( READ_BIT(devices_is_live[0], (1<<i)) )	{string_lives[i] = '1';}
+		else										{string_lives[i] = '0';}
+	}
+	for (uint8_t i = 8; i < 16; i++)	{string_lives[i] = 0x00;}	//	кастыль для подчистки хвоста строки
+
+	LCD_Command(LCD_SETDDRAMADDR);	//	писать с нулевого адреса
+	LCDsendString(string_lives);
+
+	for (uint8_t i = 0; i < 8; i++)
+	{
+		if( READ_BIT(sensors_status[0], (1<<i)) )	{string_statuses[i] = '1';}
+		else										{string_statuses[i] = '0';}
+	}
+	for (uint8_t i = 8; i < 16; i++)	{string_statuses[i] = 0x00;}	//	кастыль для подчистки хвоста строки
+
+	string_statuses[8] = ' ';
+	string_statuses[9] = ' ';
+	string_statuses[10] = ' ';
+	string_statuses[11] = ' ';
+	string_statuses[12] = ' ';
+	string_statuses[13] = result_all[0];
+	string_statuses[14] = '/';
+	string_statuses[15] = result_all[2];
+
+
+	LCD_Command(LCD_SETDDRAMADDR | SECONDSTRING);	//	писать с нулевого адреса
+	LCDsendString(string_statuses);
+	//=========================================================================================================
 }
