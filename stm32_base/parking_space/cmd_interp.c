@@ -450,7 +450,45 @@ void pack_from_uart_2_exe (void)
 						switch (parameter)
 						{
 							case PRM_NULL:	{COUNT_NULL_PACK++;}	break;
-							case PRM_PING:	{CURRENT_DEVICE_TYPE = pack[BYTE_DATA_OFFSET]; PARKING_STAGE = DEFINED;}	break;	//	сбросим бит ожидания типа
+
+							case PRM_PING:
+							{
+								CURRENT_DEVICE_TYPE = pack[BYTE_DATA_OFFSET];
+								PARKING_STAGE = DEFINED;
+
+								// посчитаем глоальный номер устройства и его место в массиве типа устройств
+								uint8_t global_N = 				pack[BYTE_SENDER_ADR];
+								uint8_t byte_for_global_N = 	global_N / 8;						//	деление вернет только целую часть
+								uint8_t bit_for_global_N = 		global_N - (byte_for_global_N * 8);	//	из адреса вычитаем целую часть от деления умноженную на 8 и получим номер бита
+
+
+								switch (CURRENT_DEVICE_TYPE)
+								{
+									case NODE:
+									{
+										CLEAR_BIT	(	dev_type[bit_0][byte_for_global_N],		(1<<bit_for_global_N)	);
+										SET_BIT		(	dev_type[bit_1][byte_for_global_N],		(1<<bit_for_global_N)	);
+									}
+									break;
+
+									case SENSOR:
+									{
+										SET_BIT		(	dev_type[bit_0][byte_for_global_N],		(1<<bit_for_global_N)	);
+										CLEAR_BIT	(	dev_type[bit_1][byte_for_global_N],		(1<<bit_for_global_N)	);
+									}
+									break;
+
+									case SCREEN:
+									{
+										SET_BIT		(	dev_type[bit_0][byte_for_global_N],		(1<<bit_for_global_N)	);
+										SET_BIT		(	dev_type[bit_1][byte_for_global_N],		(1<<bit_for_global_N)	);
+									}
+									break;
+								}
+
+							}
+							break;	//	сбросим бит ожидания типа
+
 							case PRM_BLINK: {}	break;	//	мы такое не генерируем
 						}
 					}

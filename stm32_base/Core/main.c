@@ -51,7 +51,7 @@ int main(void)
 	GPIO_Init();		//	настройка портов
 	SysTick_Init();		//	запуск системного таймера (для функции delay_ms())
 	LCD_init();
-	uart1_init (9600);
+	uart1_init (4800);
 	uart2_init (4800);
 //	uart3_init (9600);
 
