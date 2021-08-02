@@ -368,6 +368,9 @@ void pack_from_uart_2_exe (void)
 //	uint8_t flags_from_pack =		pack[BYTE_FLAGS];
 	uint8_t data =					pack[BYTE_DATA_OFFSET];
 
+	uint8_t *data_ =				pack[BYTE_DATA_OFFSET];
+	uint8_t data_size =				pack[BYTE_LEN] - MIN_PACK_LENGTH;
+
 	switch (check_hop(UART_2))		//	узнаем что надо делать с пакетом
 	{
 		case hop_up:
@@ -400,7 +403,18 @@ void pack_from_uart_2_exe (void)
 										switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства
 										{
 											case HEAD:		{}		break;	//	невозможное событие (другой головы не может быть)
-											case NODE:		{/**/}	break;	//	обрабатываем список статусов
+
+											case NODE:
+											{
+												uint8_t NODE_local_adr = adr_dev_from_pack;		//	адрес узла, которые предоставил данные
+
+												uint8_t tmp_MAX_DEV = 64;						//	временно, чтобы узел не сканировал долго, мы в дефайнах ставим 5. Привязать к значению в дефайнах
+												uint8_t offset_adr = tmp_MAX_DEV * (NODE_local_adr - 1);	//	получаем смещение в нашей памяти
+
+												for (uint8_t i = 0; i < data_size; i++)		{sensors_status[offset_adr + i] = data_[i];}	//	пишем в нашу память все как получили.
+											}
+											break;	//	обрабатываем список статусов
+
 											case SENSOR:
 											{
 												switch (data)
@@ -439,6 +453,41 @@ void pack_from_uart_2_exe (void)
 								}
 							}
 							break;
+
+
+							case PRM_LIST:
+							{
+								switch (I_am)							//	в зависимости от того кто - мы будем обрабатывать пакет
+								{
+									case HEAD:							//	если мы ГОЛОВА
+									{
+										switch (CURRENT_DEVICE_TYPE)
+										{
+												case HEAD:
+												{
+													uint8_t NODE_local_adr = adr_dev_from_pack;		//	адрес узла, которые предоставил данные
+
+													uint8_t tmp_MAX_DEV = 64;						//	временно, чтобы узел не сканировал долго, мы в дефайнах ставим 5. Привязать к значению в дефайнах
+													uint8_t offset_adr = tmp_MAX_DEV * (NODE_local_adr - 1);	//	получаем смещение в нашей памяти
+
+													for (uint8_t i = 0; i < data_size; i++)		{devices_is_live[offset_adr + i] = data_[i];}	//	пишем в нашу память все как получили.
+
+												}
+												break;
+
+												case NODE: 		{}	break;
+												case SENSOR: 	{}	break;
+										}
+									}
+									break;
+
+									case NODE:	{}	break;	//	мы не запоминаем данные других узлов
+								}
+							}
+							break;
+
+
+
 						}
 					}
 					break;

@@ -122,8 +122,8 @@ int main(void)
 	for (uint16_t  i = 0; i < 1024; i++)	{test_pack[i] = i;}
 
 	FLASH_Unlock();								//	разблокируем память
-	FLASH_Erase_Page((uint32_t)LISTs);			//	стираем память
-	write_Page((uint32_t)(LISTs), &test_pack[0]);	//	пишем слово в пишем в следующие 32 бита (4 байта) (max 55)
+//	FLASH_Erase_Page((uint32_t)LISTs);			//	стираем память
+//	write_Page((uint32_t)(LISTs), &test_pack[0]);	//	пишем слово в пишем в следующие 32 бита (4 байта) (max 55)
 	FLASH_Lock();								//	блокируем память
 
 

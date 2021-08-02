@@ -18,6 +18,8 @@
 //#include <uart_3.h>
 #include "crc8.h"
 #include <delay_ms.h>
+#include <flash.h>
+
 
 #include "lcd.h"
 
@@ -40,7 +42,7 @@ void creat_pack (void)
 	tx_pack[BYTE_PARAMETER] = unknown;
 	
 	tx_pack[BYTE_FLAGS] =						0;						//	обнулим байт флагов
-	SET_BIT(tx_pack[BYTE_FLAGS],(1<<CMD_FLAGS_PACK));						//	ставим флаг "пакет"
+	SET_BIT(tx_pack[BYTE_FLAGS],(1<<CMD_FLAGS_PACK));					//	ставим флаг "пакет"
 }
 
 void switch_dev_adr (void)
@@ -143,8 +145,8 @@ uint8_t free_address (uint8_t type_dev)
 
 void prepare_message_to_screen (void)
 {
-	tx_pack[BYTE_COMMAND] = CMD_WRITE_TEXT;			//	записываем команду - задать новый адрес
-	tx_pack[BYTE_PARAMETER] = PRM_RED;		//	записываем параметр команды	- без параметра
+	tx_pack[BYTE_COMMAND] = 	CMD_WRITE_TEXT;		//	записываем команду - задать новый адрес
+	tx_pack[BYTE_PARAMETER] = 	PRM_RED;			//	записываем параметр команды	- без параметра
 	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;
 		
 	uint8_t	count_live_devices = 0;			uint8_t	count_free_places = 0;
@@ -357,6 +359,8 @@ void Parking_Space(void)
 		
 		case CICLE_DONE:
 		{
+			// обновим данные на всех панелях
+
 			PARKING_STAGE = SEARCH;
 		}
 		break;
@@ -429,7 +433,7 @@ uint8_t sensor_is_live(uint8_t sens_adr)
 	else											{return 0;}
 }
 
-uint8_t sensor_is_free(uint8_t sens_adr)
+uint8_t sensor_is_free(uint16_t sens_adr)
 {
 	// Проверяем как помечен датчик с данным адресом (работает/неработает)
 	uint8_t byte = sens_adr/8;					//	узнаем в каком байте лежит его состояние
@@ -437,7 +441,7 @@ uint8_t sensor_is_free(uint8_t sens_adr)
 
 	//	если место под этим датчиком "занято"
 	if (READ_BIT(sensors_status[byte],(1<<bit)))	{return 0;}
-	else										{return 1;}
+	else											{return 1;}
 }
 
 void set_device_as_live(uint8_t _sensor)
@@ -468,8 +472,8 @@ void set_status_as_free(uint8_t _sensor)
 {
 	// пометить последний датчик, с которым работали, как свободное место
 	uint8_t byte = _sensor/8;					//	узнаем в каком он байте
-	uint8_t bit = 7 - (_sensor - (byte*8));	//	узнаем какой бит ему соответствует
-	CLEAR_BIT(sensors_status[byte],(1<<bit));				//	записываем 0 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
+	uint8_t bit = 7 - (_sensor - (byte*8));		//	узнаем какой бит ему соответствует
+	CLEAR_BIT(sensors_status[byte],(1<<bit));	//	записываем 0 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
 }
 /////////	КОНЕЦ СЛУЖЕБНЫХ ФУНКЦИИ		/////////
 
@@ -565,4 +569,135 @@ void message_to_LCD1602 (void)
 	LCD_Command(LCD_SETDDRAMADDR | SECONDSTRING);	//	писать с нулевого адреса
 	LCDsendString(string_statuses);
 	//=========================================================================================================
+}
+
+uint8_t rewrite_panels (void)
+{
+	uint8_t 	all_panels_is_rewrited = 0;
+
+	if (all_panels_is_rewrited)			{return 1;}
+
+	//	нужно отправить информацию на панель
+	//	для этого нужно знать следующее:
+
+	//	PANEL_global_N 		- глобальный номер панели на котору нужно отправить данные
+	//	PANEL_local_adr		- локальные адрес панели в сети контроллера (узла)
+	//	NODE_global_N 		- глобальный номер контроллера к которому подключена панель
+	//	NODE_local_adr 		- локальные адрес контроллера к которому подключена панель
+	//	GROUP				- группа котороая должны отображаться на панели
+	//	RESULT				- количество свободных мест
+
+	//	переменные, значения которых будут менять в процессе вычисления результата
+
+	//	SUBGROUP 			- номер подгруппы, входящей в группу
+	//	FIRST_SENSOR		- номер первого датчика в группе
+	//	LAST_SENSOR			- номер последнего датчика в группе
+
+
+
+	static 	uint8_t 	PANEL_global_N = 0;
+			uint8_t 	PANEL_local_adr = 0;
+
+	static 	uint8_t 	NODE_global_N = 0;
+			uint8_t 	NODE_local_adr = 0;
+
+	static	uint8_t 	GROUP = 0;
+
+	static	uint16_t 	RESULT = 0;
+
+
+			uint8_t 	SUBGROUP = 0;
+			uint16_t 	FIRST_SENSOR_N = 0;
+			uint16_t 	LAST_SENSOR_N = 0;
+
+
+
+//=============	1. выгружаем список из памяти FLASH	=========================================================================================
+	Page[WORD_CNT];					//	 массив - страницa в которую мы запишем списки, чтобы не выкачивать их каждый раз из памяти
+	//	считываем страницу
+	for (uint16_t i = 0; i < WORD_CNT; i++)		{Page[i] = read_word(LISTs + (i * WORD_ADDR_OFFSET));}	//	считываем по словам
+
+//	Разделяем страницу на нужные нам списки
+
+	uint32_t 	*SUBGROUP_2_SENSORS = 	&Page[SUBGROUP_2_SENSORS_list];		//	как сгруппированы датчики в подгруппы
+	uint8_t 	*SUBGROUPS_2_GROUP = 	&Page[SUBGROUPS_2_GROUP_list];		//	как сгруппированиы подгруппы в группы
+	uint8_t 	*PANELS_2_GROUP = 		&Page[PANELS_2_GROUP_list];			//	на какие панели закреплены группы
+	uint8_t 	*PANELS_2_CONTROLLER = 	&Page[PANELS_2_CONTROLLER_list];	//	к каким контроллерам подключены панели
+	uint8_t 	*PANEL_2_LOCAL_ADDR = 	&Page[PANEL_2_LOCAL_ADDR_list];		//	локальные адреса панелей в сети собственных контроллеров
+
+//======================================================================================================================================================
+
+// ищем в списке PANELS_2_GROUP панель, которая имеет группу
+
+//=============	2. найдем группу и панель	=========================================================================================
+
+	uint8_t find_panel_with_group = 0;
+
+	while (!find_panel_with_group)
+	{
+		PANEL_global_N++;
+		if (PANELS_2_GROUP[PANEL_global_N]	!=	0xFF)	//	если PANEL_i привязана к группе
+		{
+			GROUP = PANELS_2_GROUP[PANEL_global_N];	//	запомним номер группы
+			find_panel_with_group = 1;
+		}
+
+		if(PANEL_global_N >= panels) {all_panels_is_rewrited = 1;}
+	}
+
+//======================================================================================================================================================
+
+// теперь у нас есть панель и номер группы, который результат которой мы должны вывести
+
+//=============	3. посчитаем состояния мест =========================================================================================
+
+	uint8_t the_result_is_calculated = 0;
+
+	while (!the_result_is_calculated)
+	{
+		SUBGROUP++;
+		if (SUBGROUPS_2_GROUP[SUBGROUP]	==	GROUP)	//	если нашли подгруппу входящую в нашу группу)
+		{
+			// определяем с какого по какой датчик находятся в подгруппе
+			FIRST_SENSOR_N = 0;
+			LAST_SENSOR_N = 0;
+
+			uint32_t content =  SUBGROUP_2_SENSORS[SUBGROUP];
+
+			FIRST_SENSOR_N = 		(content >> 8) 	&& 0xFF;
+			LAST_SENSOR_N = 		 content 		&& 0xFF;
+
+			for (uint16_t sensor_N = FIRST_SENSOR_N; sensor_N <= LAST_SENSOR_N; sensor_N++)
+			{
+				RESULT += sensor_is_free(sensor_N);
+			}
+		}
+
+		if(SUBGROUP >= subgroups) {the_result_is_calculated = 1;}
+	}
+
+//======================================================================================================================================================
+
+// теперь у нас есть состояние всех датчиков входящий в нашу группу
+
+//============ 4. Узнаем к какому контроллеру подключена панель и какой у панели локальный адрес =======================================================================================================
+
+	NODE_global_N = PANELS_2_CONTROLLER[PANEL_global_N];
+	NODE_local_adr = NODE_global_N;
+
+	PANEL_local_adr = PANEL_2_LOCAL_ADDR[PANEL_global_N];
+
+//=======================================================================================================================================
+
+	// теперь у нас есть локальный адрес контроллера, локальный адрес панели, и результат
+
+//============ 5. собираем пакет и отправляем =======================================================================================================
+
+	tx_pack[BYTE_LEN] += 1;
+	tx_pack[BYTE_DATA_OFFSET] = RESULT;		// пока так. Сами в терминале для начала посмотрим
+
+	put_tx_pack();
+
+return 0;
+
 }

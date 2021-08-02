@@ -11,6 +11,7 @@
 
 	 #include "global_defines.h"
 	 #include "protocol.h"
+ 	 #include "flash.h"
 
 
 // из parking_defines.h ======================================================================
@@ -151,7 +152,7 @@ uint8_t used_network;
 	//	panel		<=>		panel_adr
 	//	controller	<=>		controller_adr
 
-
+	uint32_t Page[WORD_CNT];
 
 	//адреса во FLASH памяти
 	#define LISTs Page_31_ADDR			//	выделенная память во flash для хранения списков						//	адрес ячейки в энергонезависимой памяти где храним имя контроллера (подчиненное имя)
@@ -198,7 +199,7 @@ uint8_t used_network;
 
 
 uint8_t sensor_is_live(uint8_t adr_sensor);		//	проверить живой ли сенсор по данному адресу
-uint8_t sensor_is_free(uint8_t adr_sensor);		//	проверить свободно ли место по данному адресу
+uint8_t sensor_is_free(uint16_t adr_sensor);		//	проверить свободно ли место по данному адресу
 
 void set_device_as_live(uint8_t _sensor);		//	пометить сенсор как мертвый
 void set_device_as_dead(uint8_t _sensor);		//	пометить сенсор как живой
