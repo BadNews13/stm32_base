@@ -221,7 +221,7 @@ void set_status_as_taken(uint16_t _sensor);		//	пометить последн�
 void set_status_as_free(uint16_t _sensor);		//	пометить последний датчик, с которым работали, как свободное место
 
 
-
+uint8_t rewrite_panels (void);
 
 		
 #endif /* POLLING_H_ */

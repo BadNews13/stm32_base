@@ -391,6 +391,8 @@ void Parking_Space(void)
 
 			LIST_UPDATED = 0;
 			STATUSES_UPDATED = 0;
+			rewrite_panels();
+
 
 #else
 #endif
@@ -715,6 +717,10 @@ uint8_t rewrite_panels (void)
 		{
 			GROUP = PANELS_2_GROUP[PANEL_global_N];	//	запомним номер группы
 			find_panel_with_group = 1;
+
+			put_byte_UART1(0xBB);
+			put_byte_UART1(GROUP);
+
 		}
 
 		if(PANEL_global_N >= panels) {all_panels_is_rewrited = 1;}
@@ -770,8 +776,14 @@ uint8_t rewrite_panels (void)
 
 	tx_pack[BYTE_LEN] += 1;
 	tx_pack[BYTE_DATA_OFFSET] = RESULT;		// пока так. Сами в терминале для начала посмотрим
+/*
+	put_byte_UART1(0xBB);
+	put_byte_UART1(GROUP);
+	put_byte_UART1(RESULT);
+*/
 
-	put_tx_pack();
+
+//	put_tx_pack();
 
 return 0;
 
