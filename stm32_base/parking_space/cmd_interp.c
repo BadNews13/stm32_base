@@ -152,7 +152,7 @@ void pack_from_uart_1_exe (void)
 
 						case LIST_DEVICES:		//	запрос работающих датчиков из памяти
 						{
-							for(uint8_t i = 0; i<len_offset; i++)	{tx_pack[BYTE_DATA_OFFSET+i] = devices_is_live[i];}
+							for(uint8_t i = 0; i < len_offset; i++)	{tx_pack[BYTE_DATA_OFFSET+i] = devices_is_live[i];}
 						}
 						break;
 
@@ -181,6 +181,8 @@ void pack_from_uart_1_exe (void)
 					}
 				}
 				break;
+
+#ifdef that_device_is_HEAD
 
 				case CMD_CREATE_GROUP:
 				{
@@ -323,9 +325,8 @@ void pack_from_uart_1_exe (void)
 					}
 				}
 				break;
-
-
-
+#else
+#endif
 
 				//default:		{send_ack_error(INCORRECT_COMMAND);}	break;
 
@@ -366,9 +367,7 @@ void pack_from_uart_2_exe (void)
 	uint8_t command =				pack[BYTE_COMMAND];
 	uint8_t parameter =				pack[BYTE_PARAMETER];
 //	uint8_t flags_from_pack =		pack[BYTE_FLAGS];
-	uint8_t data =					pack[BYTE_DATA_OFFSET];
-
-	uint8_t *data_ =				pack[BYTE_DATA_OFFSET];
+	uint8_t *data =					&pack[BYTE_DATA_OFFSET];
 	uint8_t data_size =				pack[BYTE_LEN] - MIN_PACK_LENGTH;
 
 	switch (check_hop(UART_2))		//	узнаем что надо делать с пакетом
@@ -392,64 +391,54 @@ void pack_from_uart_2_exe (void)
 				{
 					case CMD_STATUS:	//	контроллер просил состояние парковочного места?
 					{
+
+#ifdef that_device_is_HEAD
 						switch (parameter)
 						{
-							case PRM_STATUS:	// ответ наданную команду обрабатывается по разному взависимости от того кто мы и кто нам на нее ответил
+							case PRM_STATUS:
 							{
-								switch (I_am)							//	в зависимости от того кто - мы будем обрабатывать пакет
+								switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства
 								{
-									case HEAD:							//	если мы ГОЛОВА
+									case HEAD:		{}		break;	//	невозможное событие (другой головы не может быть)
+// получили статусы от узла
+									case NODE:
 									{
-										switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства
+										// мы получили список статусов устройств от подчиненного узла
+										// нам нужно этот список перенести в соответствующее место в нашем списке
+										put_byte_UART1(0xAA);
+										put_byte_UART1(data[0]);
+										put_byte_UART1(data[1]);
+
+										uint8_t NODE_global_N = (adr_dev_from_pack-1) * MAX_DEVICES;;
+										uint8_t dev_local_N = 0;
+										uint8_t dev_global_N = 0;
+
+										for (uint8_t byte = 0; byte < data_size; byte++)
 										{
-											case HEAD:		{}		break;	//	невозможное событие (другой головы не может быть)
-
-											case NODE:
+											for (int bit = 7; bit >= 0; bit--)
+											//for (uint8_t bit = 0; bit < 8; bit++)
 											{
-												uint8_t NODE_local_adr = adr_dev_from_pack;		//	адрес узла, которые предоставил данные
+												dev_local_N = (byte * 8) + (7-bit);
+												dev_global_N = NODE_global_N + dev_local_N;
 
-												uint8_t tmp_MAX_DEV = 64;						//	временно, чтобы узел не сканировал долго, мы в дефайнах ставим 5. Привязать к значению в дефайнах
-												uint8_t offset_adr = tmp_MAX_DEV * (NODE_local_adr - 1);	//	получаем смещение в нашей памяти
-
-												for (uint8_t i = 0; i < data_size; i++)		{sensors_status[offset_adr + i] = data_[i];}	//	пишем в нашу память все как получили.
+												if (READ_BIT(data[byte], (1<<bit)))	{set_status_as_taken(dev_global_N);}
+												else								{set_status_as_free(dev_global_N);}
 											}
-											break;	//	обрабатываем список статусов
-
-											case SENSOR:
-											{
-												switch (data)
-												{
-													case FREE:		{set_status_as_free(CURRENT_DEVICE);}	break;
-													case TAKEN:		{set_status_as_taken(CURRENT_DEVICE);}	break;
-													case unknown:	{}	break;
-												}
-											}
-											break;	//	обрабатываем единичное состояние одного датчика
+										}
+										STATUSES_UPDATED = 1;
+									}
+									break;	//	обрабатываем список статусов
+// получили статус от датчика
+									case SENSOR:
+									{
+										switch (data[0])
+										{
+											case FREE:		{set_status_as_free(CURRENT_DEVICE);}	break;
+											case TAKEN:		{set_status_as_taken(CURRENT_DEVICE);}	break;
+											case unknown:	{}	break;
 										}
 									}
-									break;
-
-
-									case NODE:							//	если мы УЗЕЛ
-									{
-										switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства, которое нам ответило
-										{
-											case HEAD:		{}		break;	//	невозможное событие (мы не можем командовать головой)
-											case NODE:		{}		break;	//	невозможное событие (мы не можем командовать другим узлом)
-											case SENSOR:					//	обрабатываем единичное состояние одного датчика
-											{
-												switch (data)
-												{
-													case FREE:		{set_status_as_free(adr_dev_from_pack);}		break;		//	пометить место как свободное
-													case TAKEN:		{set_status_as_taken(adr_dev_from_pack);}		break;		//	пометить место как занятое
-													case unknown:	{}												break;		//	состояние парковочного места неизвестно (возможно это экран)
-												}
-											}
-											break;
-										}
-									}
-									break;
-
+									break;	//	обрабатываем единичное состояние одного датчика
 								}
 							}
 							break;
@@ -457,42 +446,90 @@ void pack_from_uart_2_exe (void)
 
 							case PRM_LIST:
 							{
-								switch (I_am)							//	в зависимости от того кто - мы будем обрабатывать пакет
+								switch (CURRENT_DEVICE_TYPE)
 								{
-									case HEAD:							//	если мы ГОЛОВА
-									{
-										switch (CURRENT_DEVICE_TYPE)
+// получили список живых датчиков от узла
+										case HEAD:	{}	break;	//	не может быть другого головного контроллера
+
+										case NODE:
 										{
-												case HEAD:
+											// мы получили список живых устройств от подчиненного узла
+											// нам нужно этот список перенести в соответствующее место в нашем списке
+
+											uint8_t NODE_global_N = (adr_dev_from_pack -1) * MAX_DEVICES;;
+											uint8_t dev_local_N = 0;
+											uint8_t dev_global_N = 0;
+
+
+											for (uint8_t byte = 0; byte < data_size; byte++)
+											{
+												for (int bit = 7; bit >= 0; bit--)
+												//for (uint8_t bit = 0; bit < 8; bit++)
 												{
-													uint8_t NODE_local_adr = adr_dev_from_pack;		//	адрес узла, которые предоставил данные
+													dev_local_N = (byte * 8) + (7-bit);
+													dev_global_N = NODE_global_N + dev_local_N;
 
-													uint8_t tmp_MAX_DEV = 64;						//	временно, чтобы узел не сканировал долго, мы в дефайнах ставим 5. Привязать к значению в дефайнах
-													uint8_t offset_adr = tmp_MAX_DEV * (NODE_local_adr - 1);	//	получаем смещение в нашей памяти
-
-													for (uint8_t i = 0; i < data_size; i++)		{devices_is_live[offset_adr + i] = data_[i];}	//	пишем в нашу память все как получили.
-
+													if (READ_BIT(data[byte], (1<<bit)))	{set_device_as_live(dev_global_N);}
+													else								{set_device_as_dead(dev_global_N);}
 												}
-												break;
+											}
+											LIST_UPDATED = 1;
+										}
+										break;
 
-												case NODE: 		{}	break;
-												case SENSOR: 	{}	break;
+										case SENSOR: 	{}	break;
+								}
+
+							}
+							break;
+
+						}
+
+
+#else
+
+						switch (parameter)
+						{
+							case PRM_STATUS:	// ответ наданную команду обрабатывается по разному взависимости от того кто мы и кто нам на нее ответил
+							{
+
+								switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства, которое нам ответило
+								{
+									case HEAD:		{}		break;	//	невозможное событие (мы не можем командовать головой)
+									case NODE:		{}		break;	//	невозможное событие (мы не можем командовать другим узлом)
+// получили статус от датчика
+									case SENSOR:					//	обрабатываем единичное состояние одного датчика
+									{
+										switch (data[0])
+										{
+											case FREE:		{set_status_as_free(adr_dev_from_pack);}		break;		//	пометить место как свободное
+											case TAKEN:		{set_status_as_taken(adr_dev_from_pack);}		break;		//	пометить место как занятое
+											case unknown:	{}												break;		//	состояние парковочного места неизвестно (возможно это экран)
 										}
 									}
 									break;
-
-									case NODE:	{}	break;	//	мы не запоминаем данные других узлов
 								}
 							}
 							break;
 
-
-
+							case PRM_LIST:
+							{
+								switch (CURRENT_DEVICE_TYPE)
+								{
+									case NODE:		{}	break;	//	мы не запоминаем данные других узлов
+									case SENSOR: 	{}	break;	//	датчик не имеет такого списка для отправки нам
+									case SCREEN: 	{}	break;	//	светодиодная панель не имеет такого списка для отправки нам
+								}
+							}
+							break;
 						}
+
+
+#endif
+
+
 					}
-					break;
-
-
+					break;	//	 для CMD_STATUS
 
 					case CMD_PING:
 					{

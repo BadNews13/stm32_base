@@ -127,6 +127,9 @@ int main(void)
 	FLASH_Lock();								//	блокируем память
 
 
+
+#ifdef that_device_is_HEAD
+
 			uint32_t tmp_lists[32];
 			for (uint8_t i = 0; i < 0xFF; i++)		//	т.к. по 4 байты выводим то код-во циклов должно быть 255
 			{
@@ -143,6 +146,9 @@ int main(void)
 				if(cnt_bytes == 16)					{delay_ms(100); cnt_bytes = 0;}
 			}
 
+			send_byte_to_uart();
+#else
+#endif
 /*
 			uint8_t *byte = &tmp_lists[0];
 			for(uint8_t i = 0; i < 32; i++)
@@ -184,6 +190,7 @@ int main(void)
 
 
 	put_byte_UART1(adr_in_uart_1);
+
 
 
 	while(1)
@@ -319,14 +326,26 @@ void GPIO_Init (void)
 void send_byte_to_uart(void)
 {
 //	put_byte_UART1(0xD1);
-	put_byte_UART1(Parking_Space_CONTROL);
-	put_byte_UART1(Parking_Space_STATUS);
+//	put_byte_UART1(Parking_Space_CONTROL);
+//	put_byte_UART1(Parking_Space_STATUS);
 //	put_byte_UART1(0xD1);
 
 //	put_byte_UART2(0xD2);
 //		put_byte_UART3(0xD3);
 
 	RTOS_SetTask(send_byte_to_uart, 1000, 0);
+
+	put_byte_UART1(devices_is_live[0]);
+	put_byte_UART1(devices_is_live[1]);
+	put_byte_UART1(devices_is_live[2]);
+	put_byte_UART1(devices_is_live[3]);
+
+	put_byte_UART1(sensors_status[0]);
+	put_byte_UART1(sensors_status[1]);
+	put_byte_UART1(sensors_status[2]);
+	put_byte_UART1(sensors_status[3]);
+
+
 
 }
 

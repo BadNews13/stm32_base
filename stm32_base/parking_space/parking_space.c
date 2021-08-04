@@ -248,8 +248,15 @@ uint8_t check_number_null_packs (uint8_t cnt)
 
 void give_cmd_status (void)
 {
-	tx_pack[BYTE_COMMAND] = CMD_STATUS;			//	записываем команду - задать новый адрес
-	tx_pack[BYTE_PARAMETER] = PRM_STATUS;		//	записываем параметр команды	- без параметра
+	tx_pack[BYTE_COMMAND] = CMD_STATUS;			//	записываем команду
+	tx_pack[BYTE_PARAMETER] = PRM_STATUS;		//	записываем параметр команды
+	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;
+}
+
+void give_cmd_list (void)
+{
+	tx_pack[BYTE_COMMAND] = CMD_STATUS;			//	записываем команду
+	tx_pack[BYTE_PARAMETER] = PRM_LIST;			//	записываем параметр команды
 	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;
 }
 
@@ -332,17 +339,45 @@ void Parking_Space(void)
 			{
 				case NONAME_DEVICE:		{give_cmd_rename();}	break;
 					
-				default:				//	����� ������������ (���������������������)
+				default:				//	если мы знаем тип устройства с которым сейчас работаем
 				{
-					if (ATTEMPTS > 1)	{PARKING_STAGE = RESTART; ATTEMPTS = 0;}
+					if (ATTEMPTS > 2)	{PARKING_STAGE = RESTART; ATTEMPTS = 0;}
+
+#ifdef that_device_is_HEAD
+
+					switch (CURRENT_DEVICE_TYPE)
+					{
+						case NODE:
+						{
+							// сначала должны запросить список живых устройств
+							if(LIST_UPDATED == 0)	{give_cmd_list();}
+
+							// затем должны запросить список статусов
+							if(STATUSES_UPDATED == 0)	{give_cmd_status();}
+
+							if (LIST_UPDATED && STATUSES_UPDATED)	{PARKING_STAGE = RESTART; ATTEMPTS = 0;}	//	если все обновили, то идем дальше
+							else									{ATTEMPTS++;}								//	если за два сообщения не вышло, то всеравно идем дальше
+						}
+						break;
+
+						case SENSOR:	{give_cmd_status();}			break;
+						case SCREEN:	{prepare_message_to_screen();}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
+					}
+
+#else
 						
 					switch (CURRENT_DEVICE_TYPE)
 					{
-						case NODE:		{give_cmd_status();}	break;
-						case SENSOR:	{give_cmd_status();}	break;
-						case SCREEN:	{prepare_message_to_screen();}	break;	
+						case NODE:		{/*give_cmd_status();*/}			break;	//	нас не интересуют статусы других узлов
+						case SENSOR:	{give_cmd_status();}			break;
+						case SCREEN:	{prepare_message_to_screen();}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
 					}
+
 					PARKING_STAGE = RESTART; ATTEMPTS = 0;
+
+#endif
+
+
 				}
 				break;
 			}
@@ -351,6 +386,15 @@ void Parking_Space(void)
 		
 		case RESTART:
 		{
+
+#ifdef that_device_is_HEAD
+
+			LIST_UPDATED = 0;
+			STATUSES_UPDATED = 0;
+
+#else
+#endif
+
 			choice_next_dev();
 			if(CURRENT_DEVICE == max_end_device)	{PARKING_STAGE = CICLE_DONE;}
 			else									{PARKING_STAGE = SEARCH;}
@@ -395,9 +439,9 @@ void Parking_Space_Init (void)
 	//	говорим какого типа данный контроллер (переделать для изменения через команды)
 
 	#ifdef that_device_is_HEAD
-		I_am = HEAD;
+		STATUSES_UPDATED = 0;
+		LIST_UPDATED = 0;
 	#else
-		I_am = NODE;
 	#endif
 
 		/*
@@ -444,35 +488,35 @@ uint8_t sensor_is_free(uint16_t sens_adr)
 	else											{return 1;}
 }
 
-void set_device_as_live(uint8_t _sensor)
+void set_device_as_live(uint16_t _sensor)
 {
 	// пометить последний датчик, с которым работали, как живой
-	uint8_t byte = _sensor/8;					//	узнаем в каком байте лежит его состояние
-	uint8_t bit = 7 - (_sensor - (byte*8));		//	узнаем в каком бите лежит его состояние
+	uint16_t byte = _sensor/8;					//	узнаем в каком байте лежит его состояние
+	uint16_t bit = 7 - (_sensor - (byte*8));		//	узнаем в каком бите лежит его состояние
 	SET_BIT(devices_is_live[byte],(1<<bit));			//	записываем 1 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
 }
 
-void set_device_as_dead(uint8_t _sensor)
+void set_device_as_dead(uint16_t _sensor)
 {
 	// пометить последний датчик, с которым работали, как нерабочий
-	uint8_t byte = _sensor/8;					//	узнаем в каком он байте
-	uint8_t bit = 7 - (_sensor - (byte*8));		//	узнаем какой бит ему соответствует
+	uint16_t byte = _sensor/8;					//	узнаем в каком он байте
+	uint16_t bit = 7 - (_sensor - (byte*8));		//	узнаем какой бит ему соответствует
 	CLEAR_BIT(devices_is_live[byte],(1<<bit));			//	пометим датчик как нерабочий
 }
 
-void set_status_as_taken(uint8_t _sensor)
+void set_status_as_taken(uint16_t _sensor)
 {
 	// пометить последний датчик, с которым работали, как занятое место
-	uint8_t byte = _sensor/8;					//	узнаем в каком он байте
-	uint8_t bit = 7 - (_sensor - (byte*8));	//	узнаем какой бит ему соответствует
+	uint16_t byte = _sensor/8;					//	узнаем в каком он байте
+	uint16_t bit = 7 - (_sensor - (byte*8));	//	узнаем какой бит ему соответствует
 	SET_BIT(sensors_status[byte],(1<<bit));				//	записываем 1 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
 }
 
-void set_status_as_free(uint8_t _sensor)
+void set_status_as_free(uint16_t _sensor)
 {
 	// пометить последний датчик, с которым работали, как свободное место
-	uint8_t byte = _sensor/8;					//	узнаем в каком он байте
-	uint8_t bit = 7 - (_sensor - (byte*8));		//	узнаем какой бит ему соответствует
+	uint16_t byte = _sensor/8;					//	узнаем в каком он байте
+	uint16_t bit = 7 - (_sensor - (byte*8));		//	узнаем какой бит ему соответствует
 	CLEAR_BIT(sensors_status[byte],(1<<bit));	//	записываем 0 в бите его состояния в массиве состояний датчиков (рабочий/нерабочий)
 }
 /////////	КОНЕЦ СЛУЖЕБНЫХ ФУНКЦИИ		/////////
@@ -539,23 +583,48 @@ void message_to_LCD1602 (void)
 	char string_lives[16];
 	char string_statuses[16];
 
-	for (uint8_t i = 0; i < 8; i++)
+	string_lives[0] = 'L';
+	string_lives[1] = 'i';
+	string_lives[2] = 'v';
+	string_lives[3] = 'e';
+	string_lives[4] = 's';
+	string_lives[5] = ':';
+	string_lives[6] = ' ';
+	string_lives[7] = ' ';
+
+	for (int i = 7; i >= 0; i--)
 	{
-		if( READ_BIT(devices_is_live[0], (1<<i)) )	{string_lives[i] = '1';}
-		else										{string_lives[i] = '0';}
+		if( READ_BIT(devices_is_live[0], (1<<i)) )	{string_lives[(7-i)+8] = '1';}
+		else										{string_lives[(7-i)+8] = '0';}
 	}
-	for (uint8_t i = 8; i < 16; i++)	{string_lives[i] = 0x00;}	//	кастыль для подчистки хвоста строки
+
+//	for (uint8_t i = 8; i < 16; i++)	{string_lives[i] = 0x00;}	//	кастыль для подчистки хвоста строки
+
+
+	string_lives[8] = 'x';
+	string_lives[9] = 'x';
 
 	LCD_Command(LCD_SETDDRAMADDR);	//	писать с нулевого адреса
 	LCDsendString(string_lives);
 
-	for (uint8_t i = 0; i < 8; i++)
-	{
-		if( READ_BIT(sensors_status[0], (1<<i)) )	{string_statuses[i] = '1';}
-		else										{string_statuses[i] = '0';}
-	}
-	for (uint8_t i = 8; i < 16; i++)	{string_statuses[i] = 0x00;}	//	кастыль для подчистки хвоста строки
+	//= выводим на второй строке байт со статусами устройств ==================================================
 
+	string_statuses[0] = 'S';
+	string_statuses[1] = 't';
+	string_statuses[2] = 'a';
+	string_statuses[3] = 't';
+	string_statuses[4] = 'u';
+	string_statuses[5] = 's';
+	string_statuses[6] = ':';
+	string_statuses[7] = ' ';
+
+	for (int i = 7; i >= 0; i--)
+	{
+		if( READ_BIT(sensors_status[0], (1<<i)) )	{string_statuses[(7-i)+8] = '1';}
+		else										{string_statuses[(7-i)+8] = '0';}
+	}
+//	for (uint8_t i = 8; i < 16; i++)	{string_statuses[i] = 0x00;}	//	кастыль для подчистки хвоста строки
+/*
 	string_statuses[8] = ' ';
 	string_statuses[9] = ' ';
 	string_statuses[10] = ' ';
@@ -564,12 +633,18 @@ void message_to_LCD1602 (void)
 	string_statuses[13] = result_all[0];
 	string_statuses[14] = '/';
 	string_statuses[15] = result_all[2];
+*/
 
+	string_statuses[8] = 'x';
+	string_statuses[9] = 'x';
 
 	LCD_Command(LCD_SETDDRAMADDR | SECONDSTRING);	//	писать с нулевого адреса
 	LCDsendString(string_statuses);
 	//=========================================================================================================
 }
+
+
+#ifdef that_device_is_HEAD
 
 uint8_t rewrite_panels (void)
 {
@@ -701,3 +776,6 @@ uint8_t rewrite_panels (void)
 return 0;
 
 }
+#else
+#endif
+

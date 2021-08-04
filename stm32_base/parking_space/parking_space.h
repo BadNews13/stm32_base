@@ -15,19 +15,32 @@
 
 
 // из parking_defines.h ======================================================================
-#define that_device_is_HEAD
-#define MAX_DEVICES 5							//	количество устройств в данном узле (и во всех остальный узлах по столько же)
-uint8_t devices_is_live[(MAX_DEVICES/8)+1];		//	массив работающих устройств (1 бит - 1 устройство) (номер бита в массиве = адресу датчика)
-//uint8_t sensors_status[(MAX_DEVICES/8)+1];		//	массив результатов датчиков (1 бит - 1 датчик) (номер бита в массиве = адресу датчика)
 
-//====== В ОЗУ ================================================================================================================
+#define that_device_is_HEAD						//	влияет на выделение памяти и обработку некоторых ACK ответов
 
-	uint8_t sensors_status[30];			//	статусы мест
-/*
-	uint8_t dev_type_bit_0[30];		//	первый бит типа устройства	наприма 00 - unknown
-	uint8_t dev_type_bit_1[30];		//	второй бит типа устроуства
-*/
-	uint8_t dev_type[2][30];
+#define MAX_DEVICES 10							//	количество устройств в данном узле (и во всех остальный узлах по столько же)
+
+#ifdef that_device_is_HEAD
+
+	uint8_t devices_is_live[	((MAX_DEVICES * MAX_DEVICES) / 8 ) + 1	];	//	массив работающих устройств (1 бит - 1 устройство) (номер бита в массиве = адресу датчика)
+	uint8_t sensors_status[		((MAX_DEVICES * MAX_DEVICES) / 8 ) + 1	];
+	uint8_t dev_type[2][		((MAX_DEVICES * MAX_DEVICES) / 8 ) + 1	];
+
+	#define node_offset	MAX_DEVICES				//	отступ в нашем массиве для каждого следующего контроллера
+
+	volatile uint8_t LIST_UPDATED;				//	список живых устройств обновлен
+	volatile uint8_t STATUSES_UPDATED;			//	список статусов обновлен
+
+#else
+
+	uint8_t devices_is_live[(MAX_DEVICES/8)+1];		//	массив работающих устройств (1 бит - 1 устройство) (номер бита в массиве = адресу датчика)
+	uint8_t sensors_status[(MAX_DEVICES/8)+1];		//	массив результатов датчиков (1 бит - 1 датчик) (номер бита в массиве = адресу датчика)
+	uint8_t dev_type[2][(MAX_DEVICES/8)+1];
+
+#endif
+
+//====== для dev_type ================================================================================================================
+
 	#define bit_0 0
 	#define bit_1 1
 	//	bit_0	bit_1
@@ -128,6 +141,7 @@ uint8_t used_network;
 	//	void parking_space (void);
 		void put_tx_pack (void);
 		void give_cmd_status (void);
+		void give_cmd_list (void);
 	/////////////////////////////////////////////////
 
 
@@ -201,10 +215,10 @@ uint8_t used_network;
 uint8_t sensor_is_live(uint8_t adr_sensor);		//	проверить живой ли сенсор по данному адресу
 uint8_t sensor_is_free(uint16_t adr_sensor);		//	проверить свободно ли место по данному адресу
 
-void set_device_as_live(uint8_t _sensor);		//	пометить сенсор как мертвый
-void set_device_as_dead(uint8_t _sensor);		//	пометить сенсор как живой
-void set_status_as_taken(uint8_t _sensor);		//	пометить последний датчик, с которым работали, как занятое мест
-void set_status_as_free(uint8_t _sensor);		//	пометить последний датчик, с которым работали, как свободное место
+void set_device_as_live(uint16_t _sensor);		//	пометить сенсор как мертвый
+void set_device_as_dead(uint16_t _sensor);		//	пометить сенсор как живой
+void set_status_as_taken(uint16_t _sensor);		//	пометить последний датчик, с которым работали, как занятое мест
+void set_status_as_free(uint16_t _sensor);		//	пометить последний датчик, с которым работали, как свободное место
 
 
 

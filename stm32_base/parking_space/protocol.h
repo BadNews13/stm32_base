@@ -38,7 +38,8 @@
 
 volatile uint8_t CURRENT_DEVICE;				//	устройство к которому был послан последний пакет
 volatile uint8_t CURRENT_DEVICE_TYPE;			//	устройство к которому был послан последний пакет
-volatile uint8_t CURRENT_COUNT_PACK;						//	номер сгенерированного пакета
+volatile uint8_t CURRENT_COUNT_PACK;			//	номер сгенерированного пакета
+
 
 volatile uint8_t COUNT_NULL_PACK;			//	счетичк 3-х байтных пакетов от нулевых датчиков
 volatile uint8_t MY_DEVICE_TYPE;
