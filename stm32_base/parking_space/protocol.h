@@ -36,8 +36,8 @@
 #define CMD_FLAGS_ERROR				7			//	флаг "ошибка"
 
 
-volatile uint8_t CURRENT_DEVICE;				//	устройство к которому был послан последний пакет
-volatile uint8_t CURRENT_DEVICE_TYPE;			//	устройство к которому был послан последний пакет
+volatile uint8_t ADDR_OF_SELECTED_DEVICE;		//	устройство к которому был послан последний пакет
+volatile uint8_t TYPE_OF_SELECTED_DEVICE;		//	устройство к которому был послан последний пакет
 volatile uint8_t CURRENT_COUNT_PACK;			//	номер сгенерированного пакета
 
 

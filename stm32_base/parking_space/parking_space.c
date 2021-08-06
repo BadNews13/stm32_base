@@ -30,28 +30,28 @@ uint16_t TIME_FOR_TIME_OUT_ACK = 100;	//	время ожидания ACK дол�
 void creat_pack (void)
 {
 	//	строим маршрут до мастера и кладем ответные данные
-	tx_pack[BYTE_LEN] =							MIN_PACK_LENGTH;		//	длина пакета (переделать на авто расчет)
-	tx_pack[BYTE_RECEIVER_ADR] =				CURRENT_DEVICE;			//	указываем адрес
-	tx_pack[BYTE_NEXT_RECEIVER_ADR] =			ROUTE_END;				//	маршрут дальше первой передачи не пойдет
-	tx_pack[BYTE_ADDR_3] =						ROUTE_END;				//	этот байт можно не заполнять. его не прочтут
-	tx_pack[BYTE_PREVIOUS_SENDER_ADR] =			ROUTE_END;				//	этот байт нужно выставить в 0
-	tx_pack[BYTE_SENDER_ADR] =					MASTER;					//	собственный адрес в сети RS232
-//	tx_pack[BYTE_COUNT_PACK] =					++CURRENT_COUNT_PACK;	//	номер пакета (по версии PC)
+	tx_pack[BYTE_LEN] =							MIN_PACK_LENGTH;			//	длина пакета (переделать на авто расчет)
+	tx_pack[BYTE_RECEIVER_ADR] =				ADDR_OF_SELECTED_DEVICE;	//	указываем адрес
+	tx_pack[BYTE_NEXT_RECEIVER_ADR] =			ROUTE_END;					//	маршрут дальше первой передачи не пойдет
+	tx_pack[BYTE_ADDR_3] =						ROUTE_END;					//	этот байт можно не заполнять. его не прочтут
+	tx_pack[BYTE_PREVIOUS_SENDER_ADR] =			ROUTE_END;					//	этот байт нужно выставить в 0
+	tx_pack[BYTE_SENDER_ADR] =					MASTER;						//	собственный адрес в сети RS232
+//	tx_pack[BYTE_COUNT_PACK] =					++CURRENT_COUNT_PACK;		//	номер пакета (по версии PC)
 
 	tx_pack[BYTE_COMMAND] = unknown;
 	tx_pack[BYTE_PARAMETER] = unknown;
 	
-	tx_pack[BYTE_FLAGS] =						0;						//	обнулим байт флагов
-	SET_BIT(tx_pack[BYTE_FLAGS],(1<<CMD_FLAGS_PACK));					//	ставим флаг "пакет"
+	tx_pack[BYTE_FLAGS] =						0;							//	обнулим байт флагов
+	SET_BIT(tx_pack[BYTE_FLAGS],(1<<CMD_FLAGS_PACK));						//	ставим флаг "пакет"
 }
 
 void switch_dev_adr (void)
 {
-	CURRENT_DEVICE++;																		//	��������� � ���������� ������
-	CURRENT_DEVICE_TYPE = unknown;															//	���������� ��� ����������
+	ADDR_OF_SELECTED_DEVICE++;																		//	��������� � ���������� ������
+	TYPE_OF_SELECTED_DEVICE = unknown;															//	���������� ��� ����������
 
-	if ((CURRENT_DEVICE == 0xFF) || (CURRENT_DEVICE < 0x02))	{CURRENT_DEVICE = 0x02;}	//	������� �� ������������� ���������
-	if (CURRENT_DEVICE > MAX_DEVICES)							{CURRENT_DEVICE = 0xFF;}	//	����� ���������� ������� ����� ��������� ����� ����������
+	if ((ADDR_OF_SELECTED_DEVICE == 0xFF) || (ADDR_OF_SELECTED_DEVICE < 0x02))	{ADDR_OF_SELECTED_DEVICE = 0x02;}	//	������� �� ������������� ���������
+	if (ADDR_OF_SELECTED_DEVICE > MAX_DEVICES)									{ADDR_OF_SELECTED_DEVICE = 0xFF;}	//	����� ���������� ������� ����� ��������� ����� ����������
 }
 
 
@@ -86,9 +86,9 @@ void rebuild_for_resend (uint8_t *pack)
 	//		если отправитель мастер		 		или		не стоит флаг ACK пакета								//	то шлем вниз
 	if (	pack[BYTE_SENDER_ADR] == MASTER		||		!READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG))	)
 	{
-		pack[BYTE_SENDER_ADR] = MASTER;																			//	вставляем адрес мастера, чтобы отправить вниз
-		CURRENT_COUNT_PACK = pack[BYTE_COUNT_PACK];
-		CURRENT_DEVICE = pack[BYTE_RECEIVER_ADR];
+		pack[BYTE_SENDER_ADR] = 	MASTER;																			//	вставляем адрес мастера, чтобы отправить вниз
+		CURRENT_COUNT_PACK = 		pack[BYTE_COUNT_PACK];
+		ADDR_OF_SELECTED_DEVICE =	pack[BYTE_RECEIVER_ADR];
 	}
 }
 
@@ -106,8 +106,8 @@ void time_out_ACK (void)
 
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
 
-	if (!(CURRENT_DEVICE == NONAME_DEVICE))	{PARKING_STAGE = RESTART;}
-	if (!tx_pack[BYTE_PREVIOUS_SENDER_ADR])	{set_device_as_dead(CURRENT_DEVICE);}	//	если отправленный пакет не имеет другого отправителя в своем адресе, то он наш => пометим устройство как мертвое
+	if (!(ADDR_OF_SELECTED_DEVICE == IS_NONAME))	{PARKING_STAGE = RESTART;}
+	if (!tx_pack[BYTE_PREVIOUS_SENDER_ADR])			{set_device_as_dead(ADDR_OF_SELECTED_DEVICE);}	//	если отправленный пакет не имеет другого отправителя в своем адресе, то он наш => пометим устройство как мертвое
 }
 
 
@@ -153,7 +153,7 @@ void prepare_message_to_screen (void)
 	
 	for (uint8_t i = 2; i<MAX_DEVICES; i++)
 	{
-		if (i != CURRENT_DEVICE)							//	проходим по все устройствам из памяти кроме текущего, т.к. текущий - экран
+		if (i != ADDR_OF_SELECTED_DEVICE)					//	проходим по все устройствам из памяти кроме текущего, т.к. текущий - экран
 		{
 			if (sensor_is_live(i))
 			{
@@ -189,7 +189,7 @@ void choice_next_dev (void)
 {
 	message_to_LCD1602();
 	switch_dev_adr();
-	CURRENT_DEVICE_TYPE = unknown;
+	TYPE_OF_SELECTED_DEVICE = unknown;
 	COUNT_NULL_PACK = 0;			//	 для rename
 }
 
@@ -213,10 +213,10 @@ void give_cmd_rename (void)
 	tx_pack[BYTE_COMMAND] = CMD_SET_ADR;				//	записываем команду - задать новый адрес
 	tx_pack[BYTE_PARAMETER] = PRM_NULL;					//	записываем параметр команды	- без параметра
 
-	CURRENT_DEVICE = free_address(CURRENT_DEVICE_TYPE);	//	новый адрес согласно типу устройства
-	tx_pack[BYTE_DATA_OFFSET] = CURRENT_DEVICE;
+	ADDR_OF_SELECTED_DEVICE = free_address(TYPE_OF_SELECTED_DEVICE);	//	новый адрес согласно типу устройства
+	tx_pack[BYTE_DATA_OFFSET] = ADDR_OF_SELECTED_DEVICE;
 
-//	tx_pack[BYTE_DATA_OFFSET] = free_address(CURRENT_DEVICE_TYPE);
+//	tx_pack[BYTE_DATA_OFFSET] = free_address(TYPE_OF_SELECTED_DEVICE);
 
 	tx_pack[BYTE_LEN] = tx_pack[BYTE_LEN] + 1;			//	увеличиваем длину на 1 байт
 	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;
@@ -257,156 +257,6 @@ void give_cmd_list (void)
 
 
 	
-void Parking_Space(void)
-{
-	static uint8_t DONE = 0;
-	static uint8_t ATTEMPTS = 0;				//	попытки (для поиска новых устройств)
-	
-	creat_pack();								//	собираем основу пакета
-	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;		//	ставим время ACK
-
-	switch(PARKING_STAGE)
-	{
-		case SEARCH:		//	этап поиска	(любого) устройства
-		{
-			ATTEMPTS++;
-			switch (CURRENT_DEVICE)		//	какой адрес сейчас
-			{
-				case NONAME_DEVICE:
-				{
-					switch (check_number_null_packs(COUNT_NULL_PACK))
-					{
-						case TOO_LITTLE:
-						{
-							switch(ATTEMPTS)
-							{
-								case 1:		{give_cmd_ping_null();}						break;	//	запрашиваем нулевые пакеты
-								case 2:		{give_cmd_reset();}							break;	//	отправляем команду перезагрузки всем новым устройствас
-								default:	{PARKING_STAGE = RESTART; ATTEMPTS = 0;}	break;	//	переключаемся к обычному опросу
-							}
-						}
-						break;
-						
-						case TOO_MUCH:
-						{
-							if (ATTEMPTS < 4)	{give_cmd_ping_null();}				//	продолжаем инициализировать отправку нулевый пакетов
-							else				{PARKING_STAGE = RESTART; ATTEMPTS = 0;}
-						}
-						break;
-
-						case ONE:
-						{
-							if (ATTEMPTS > 2)	{PARKING_STAGE = DETECTED;	ATTEMPTS = 0;}	//	>2 потому что из TOO_LITTLE при первом же получении пакета попытки не обнулятся
-							else				{give_cmd_ping_null();}						//	контрольный опрос
-						}
-						break;
-					}
-				}
-				break;
-				
-				default: {PARKING_STAGE = DETECTED;	ATTEMPTS = 0;} break;		//	считаем что все остальные устройства существуют уже
-			}
-		}
-		break;
-		
-		
-		case DETECTED:	//	Обнаружили устройство	(был отсев до одного нулевого пакета, либо перешли сюда при любом существующем уже устройству)
-		{
-			COUNT_NULL_PACK = 0;
-			
-			switch (CURRENT_DEVICE_TYPE)		//	какой типу устроства
-			{
-				case unknown:					//	незнаем
-				{
-					if (ATTEMPTS > 1)	{PARKING_STAGE = RESTART;	ATTEMPTS = 0;}
-					else				{give_cmd_ping_type();}
-				}
-				break;
-				
-				default:	{PARKING_STAGE = DEFINED; ATTEMPTS = 0;}	break;	//	тип неизвестного устройства устройства определен
-			}
-		}
-		break;	
-		
-		
-		case DEFINED:		//	определен тип устройства
-		{
-			switch (CURRENT_DEVICE)		//	����� ����� � ���������� � ������� �� ��������
-			{
-				case NONAME_DEVICE:		{give_cmd_rename();}	break;
-					
-				default:				//	если мы знаем тип устройства с которым сейчас работаем
-				{
-					if (ATTEMPTS > 2)	{PARKING_STAGE = RESTART; ATTEMPTS = 0;}
-
-#ifdef that_device_is_HEAD
-
-					switch (CURRENT_DEVICE_TYPE)
-					{
-						case NODE:
-						{
-							// сначала должны запросить список живых устройств
-							if(LIST_UPDATED == 0)	{give_cmd_list();}
-
-							// затем должны запросить список статусов
-							if(STATUSES_UPDATED == 0)	{give_cmd_status();}
-
-							if (LIST_UPDATED && STATUSES_UPDATED)	{DONE = 1;}			//	если все обновили, то идем дальше
-							else									{ATTEMPTS++;}		//	если за два сообщения не вышло, то всеравно идем дальше
-						}
-						break;
-
-						case SENSOR:	{give_cmd_status();					DONE = 1;}	break;
-						case SCREEN:	{/*prepare_message_to_screen();*/	DONE = 1;}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
-					}
-
-#else
-						
-					switch (CURRENT_DEVICE_TYPE)
-					{
-						case NODE:		{/*give_cmd_status();*/				DONE = 1;}	break;	//	нас не интересуют статусы других узлов
-						case SENSOR:	{give_cmd_status(); 				DONE = 1;}	break;
-						case SCREEN:	{/*prepare_message_to_screen();*/	DONE = 1;}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
-					}
-
-#endif
-
-					if (DONE)	{PARKING_STAGE = RESTART; ATTEMPTS = 0; DONE = 0;}
-				}
-				break;
-			}
-		}
-		break;
-		
-		case RESTART:
-		{
-#ifdef that_device_is_HEAD
-			LIST_UPDATED = 0;
-			STATUSES_UPDATED = 0;
-#else
-#endif
-			choice_next_dev();
-			if(CURRENT_DEVICE == max_end_device)	{PARKING_STAGE = CICLE_DONE;}
-			else									{PARKING_STAGE = SEARCH;}
-		}
-		break;
-		
-		case CICLE_DONE:
-		{
-
-#ifdef that_device_is_HEAD
-			if (rewrite_panels())		{PARKING_STAGE = SEARCH;}	// обновим данные на всех панелях
-#else
-										 PARKING_STAGE = SEARCH;
-#endif
-
-		}
-		break;
-	}
-		if (tx_pack[BYTE_COMMAND]) 		{put_tx_pack();}
-			else {/*put_byte_to_soft_uart(0xFA);*/}
-}
-				
 					
 					
 					
@@ -438,7 +288,7 @@ void Parking_Space_Init (void)
 	//	говорим какого типа данный контроллер (переделать для изменения через команды)
 
 	#ifdef that_device_is_HEAD
-		STATUSES_UPDATED = 0;
+		STATUS_UPDATED = 0;
 		LIST_UPDATED = 0;
 	#else
 	#endif
@@ -452,7 +302,7 @@ void Parking_Space_Init (void)
 		adr_in_uart_1 = 7;								//	пока дадим себе адрес №9 в сети верхнего уровня
 		adr_in_uart_2 = 1;
 
-		CURRENT_DEVICE = 2;								//	начнем с устройства №2
+		ADDR_OF_SELECTED_DEVICE = 2;					//	начнем с устройства №2
 		COUNT_NULL_PACK = TOO_LITTLE;					//	чтобы запускался отсев
 
 		Parking_Space_STATUS = 0;
@@ -859,3 +709,174 @@ pack_for_led[pack_for_led[BYTE_LEN]-1] =	crc8(&pack_for_led[0],pack_for_led[BYTE
 
 for(uint8_t i = 0; i < pack_for_led[BYTE_LEN]; i++)		{put_byte_UART1(pack_for_led[i]);}
 */
+
+
+
+
+
+
+
+void Parking_Space(void)
+{
+	static uint8_t DONE = 0;
+	static uint8_t SEND = 0;
+	static uint8_t ATTEMPTS = 0;				//	попытки (для поиска новых устройств)
+
+	creat_pack();								//	собираем основу пакета
+	TIME_FOR_TIME_OUT_ACK = delay_for_cmd;		//	ставим время ACK
+
+	switch(PARKING_STAGE)
+	{
+		case SEARCH:		//	этап поиска	(любого) устройства
+		{
+			switch (ADDR_OF_SELECTED_DEVICE)			//	какой адрес сейчас
+			{
+				case IS_NONAME:
+				{
+					switch (check_number_null_packs(COUNT_NULL_PACK))
+					{
+						case TOO_LITTLE:
+						{
+							switch (ATTEMPTS)
+							{
+								case 0:		{give_cmd_ping_null();}		break;					//	запрашиваем нулевые пакеты
+								case 1:		{give_cmd_reset();}			break;					//	отправляем команду перезагрузки всем новым устройствас
+								default:	{ATTEMPTS = OVER;}			break;					//	переключаемся к обычному опросу
+							}
+						}
+						break;
+
+						case TOO_MUCH:
+						{
+							if (ATTEMPTS < 3)	{give_cmd_ping_null();}							//	продолжаем инициализировать отправку нулевый пакетов
+							else				{ATTEMPTS = OVER;}
+						}
+						break;
+
+						case ONE:
+						{
+							if (ATTEMPTS > 1)	{DONE = 1;}										//	>2 потому что из TOO_LITTLE при первом же получении пакета попытки не обнулятся
+							else				{give_cmd_ping_null();}							//	контрольный опрос
+						}
+						break;
+					}
+				}
+				break;
+
+				default: {DONE = 1;} break;														//	считаем что все остальные устройства существуют уже
+			}
+
+		//	if 		(ATTEMPTS > 1)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
+			if 		(DONE)				{PARKING_STAGE = DETECTED;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
+			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
+			else						{ATTEMPTS++;}											//	продолжаем попытки
+		}
+		break;
+
+
+		case DETECTED:	//	Обнаружили устройство	(был отсев до одного нулевого пакета, либо перешли сюда при любом существующем уже устройству)
+		{
+			COUNT_NULL_PACK = 0;
+
+			switch (TYPE_OF_SELECTED_DEVICE)													//	какой типу устроства
+			{
+				case unknown:	{give_cmd_ping_type();}		break;								//	незнаем
+				default:		{DONE = 1;}					break;								//	тип неизвестного устройства определен
+			}
+
+			if 		(ATTEMPTS > 0)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
+			if 		(DONE)				{PARKING_STAGE = DEFINED;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
+			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
+			else						{ATTEMPTS++;}											//	продолжаем попытки
+		}
+		break;
+
+
+		case DEFINED:		//	определен тип устройства
+		{
+			switch (ADDR_OF_SELECTED_DEVICE)		//	����� ����� � ���������� � ������� �� ��������
+			{
+				case IS_NONAME:		{give_cmd_rename();}	break;								//	если это 0xFF устройство
+
+				default:																		//	если мы знаем тип устройства с которым сейчас работаем
+				{
+					switch (TYPE_OF_SELECTED_DEVICE)
+					{
+						case NODE:
+						{
+#ifdef that_device_is_HEAD
+							if		(!LIST_UPDATED)		{give_cmd_list();}						// сначала должны запросить список живых устройств
+							else if (!STATUS_UPDATED)	{give_cmd_status();}					// затем должны запросить список статусов
+							else 						{DONE = 1;}
+#else
+							DONE = 1;
+#endif
+						}
+						break;
+
+						case SENSOR:
+						{
+							if		(!STATUS_UPDATED)	{give_cmd_status();}
+							else 						{DONE = 1;}
+						}
+						break;
+
+						case SCREEN:	{/*prepare_message_to_screen();*/	DONE = 1;}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
+					}
+				}
+				break;
+			}
+#ifdef that_device_is_HEAD
+			if 		(ATTEMPTS > 1)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
+#else
+			if 		(ATTEMPTS > 0)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
+#endif
+			if 		(DONE)				{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
+			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
+			else	{ATTEMPTS++;}																//	продолжаем попытки
+
+		}
+		break;
+
+		case RESTART:
+		{
+			STATUS_UPDATED = 0;
+
+#ifdef that_device_is_HEAD
+			LIST_UPDATED = 0;
+#endif
+
+			choice_next_dev();
+			if(ADDR_OF_SELECTED_DEVICE == max_end_device)	{PARKING_STAGE = CICLE_DONE;}
+			else											{PARKING_STAGE = SEARCH;}
+
+		}
+		break;
+
+		case CICLE_DONE:
+		{
+
+#ifdef that_device_is_HEAD
+			if (rewrite_panels())		{PARKING_STAGE = SEARCH;}	// обновим данные на всех панелях
+#else
+										 PARKING_STAGE = SEARCH;
+#endif
+
+/*
+#ifdef that_device_is_HEAD
+			if 		(ATTEMPTS > 1)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
+#else
+			if 		(ATTEMPTS > 0)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
+#endif
+			if 		(DONE)				{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
+			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
+			else	{ATTEMPTS++;}																//	продолжаем попытки
+
+*/
+
+		}
+		break;
+	}
+		if (tx_pack[BYTE_COMMAND]) 		{put_tx_pack();}
+			else {/*put_byte_to_soft_uart(0xFA);*/}
+}

@@ -18,7 +18,8 @@
 
 #define that_device_is_HEAD						//	влияет на выделение памяти и обработку некоторых ACK ответов
 
-#define MAX_DEVICES 10							//	количество устройств в данном узле (и во всех остальный узлах по столько же)
+#define MAX_DEVICES 	10							//	количество устройств в данном узле (и во всех остальный узлах по столько же)
+#define OVER			21						//	максимальное количество попыток ATTEMPTS
 
 #ifdef that_device_is_HEAD
 
@@ -29,7 +30,7 @@
 	#define node_offset	MAX_DEVICES				//	отступ в нашем массиве для каждого следующего контроллера
 
 	volatile uint8_t LIST_UPDATED;				//	список живых устройств обновлен
-	volatile uint8_t STATUSES_UPDATED;			//	список статусов обновлен
+	volatile uint8_t STATUS_UPDATED;			//	список статусов обновлен
 
 #else
 
@@ -132,10 +133,10 @@ uint8_t used_network;
 		#define	DETECTED			0x0C			//	устройство определен
 		#define	DEFINED				0x0E
 		#define	ASSIGNED			0x0F
-		#define RESTART				0x00
+		#define RESTART				0x00		//NEXT_DEVICE
 		#define CICLE_DONE			0x10
 		
-		#define NONAME_DEVICE	0xFF
+		#define IS_NONAME	0xFF
 
 		uint8_t check_number_null_packs (uint8_t cnt);
 	//	void parking_space (void);
@@ -222,6 +223,8 @@ void set_status_as_free(uint16_t _sensor);		//	пометить последни
 
 
 uint8_t rewrite_panels (void);
+
+
 
 		
 #endif /* POLLING_H_ */

@@ -385,7 +385,7 @@ void pack_from_uart_2_exe (void)
 //			set_device_as_live(CURRENT_DEVICE);
 
 			if(	(CURRENT_COUNT_PACK	== count_from_pack) &&		//	если это ответ на текущий, отправленный пакет
-				(CURRENT_DEVICE	== adr_dev_from_pack)		)	//	адрес датчика совпадет с тем дачтиком, с которым мы работатем (с тем кому отправили прошлый пакет)
+				(ADDR_OF_SELECTED_DEVICE	== adr_dev_from_pack)		)	//	адрес датчика совпадет с тем дачтиком, с которым мы работатем (с тем кому отправили прошлый пакет)
 			{
 				switch (command)	//	в зависимости от команды на которую этот пакет является ответом (команда лежит в пришедшем пакете)
 				{
@@ -397,7 +397,7 @@ void pack_from_uart_2_exe (void)
 						{
 							case PRM_STATUS:
 							{
-								switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства
+								switch (TYPE_OF_SELECTED_DEVICE)	//	в зависимости от текущего устройства
 								{
 									case HEAD:		{}		break;	//	невозможное событие (другой головы не может быть)
 // получили статусы от узла
@@ -428,13 +428,13 @@ void pack_from_uart_2_exe (void)
 												else								{set_status_as_free(dev_global_N);}
 											}
 										}
-										STATUSES_UPDATED = 1;
+										STATUS_UPDATED = 1;
 									}
 									break;	//	обрабатываем список статусов
 // получили статус от датчика
 									case SENSOR:
 									{
-										uint8_t dev_global_N = CURRENT_DEVICE;
+										uint8_t dev_global_N = ADDR_OF_SELECTED_DEVICE;
 
 										set_device_as_live(dev_global_N);
 
@@ -453,7 +453,7 @@ void pack_from_uart_2_exe (void)
 
 							case PRM_LIST:
 							{
-								switch (CURRENT_DEVICE_TYPE)
+								switch (TYPE_OF_SELECTED_DEVICE)
 								{
 // получили список живых датчиков от узла
 										case HEAD:	{}	break;	//	не может быть другого головного контроллера
@@ -500,7 +500,7 @@ void pack_from_uart_2_exe (void)
 							case PRM_STATUS:	// ответ наданную команду обрабатывается по разному взависимости от того кто мы и кто нам на нее ответил
 							{
 
-								switch (CURRENT_DEVICE_TYPE)	//	в зависимости от текущего устройства, которое нам ответило
+								switch (TYPE_OF_SELECTED_DEVICE)	//	в зависимости от текущего устройства, которое нам ответило
 								{
 									case HEAD:		{}		break;	//	невозможное событие (мы не можем командовать головой)
 									case NODE:		{}		break;	//	невозможное событие (мы не можем командовать другим узлом)
@@ -521,7 +521,7 @@ void pack_from_uart_2_exe (void)
 
 							case PRM_LIST:
 							{
-								switch (CURRENT_DEVICE_TYPE)
+								switch (TYPE_OF_SELECTED_DEVICE)
 								{
 									case NODE:		{}	break;	//	мы не запоминаем данные других узлов
 									case SENSOR: 	{}	break;	//	датчик не имеет такого списка для отправки нам
@@ -545,7 +545,7 @@ void pack_from_uart_2_exe (void)
 
 							case PRM_PING:
 							{
-								CURRENT_DEVICE_TYPE = pack[BYTE_DATA_OFFSET];
+								TYPE_OF_SELECTED_DEVICE = pack[BYTE_DATA_OFFSET];
 								PARKING_STAGE = DEFINED;
 
 								// посчитаем глоальный номер устройства и его место в массиве типа устройств
@@ -555,7 +555,7 @@ void pack_from_uart_2_exe (void)
 
 								set_device_as_live(global_N);
 
-								switch (CURRENT_DEVICE_TYPE)
+								switch (TYPE_OF_SELECTED_DEVICE)
 								{
 									case NODE:
 									{
