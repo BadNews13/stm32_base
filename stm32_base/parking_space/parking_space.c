@@ -102,7 +102,6 @@ void time_out_ACK (void)
 //	if (CURRENT_DEVICE == 3)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
 
 
-
 	for (uint8_t i = 0; i<30; i++)
 
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
@@ -186,7 +185,6 @@ void prepare_message_to_screen (void)
 /////////////////////////////////////////////////////////////////////////////////////
 
 
-
 void choice_next_dev (void)
 {
 	message_to_LCD1602();
@@ -195,8 +193,6 @@ void choice_next_dev (void)
 	COUNT_NULL_PACK = 0;			//	 для rename
 }
 
-
-
 void give_cmd_ping_null (void)
 {
 	COUNT_NULL_PACK = 0;								//	сбросим кол-во полученных нулевых пакетов
@@ -204,7 +200,6 @@ void give_cmd_ping_null (void)
 	tx_pack[BYTE_PARAMETER] = PRM_NULL;					//	записываем параметр команды - запрос нулевых пакетов от новых устройств
 	TIME_FOR_TIME_OUT_ACK = delay_for_null_packs;
 }
-
 
 void give_cmd_ping_type (void)
 {
@@ -264,6 +259,7 @@ void give_cmd_list (void)
 	
 void Parking_Space(void)
 {
+	static uint8_t DONE = 0;
 	static uint8_t ATTEMPTS = 0;				//	попытки (для поиска новых устройств)
 	
 	creat_pack();								//	собираем основу пакета
@@ -355,29 +351,27 @@ void Parking_Space(void)
 							// затем должны запросить список статусов
 							if(STATUSES_UPDATED == 0)	{give_cmd_status();}
 
-							if (LIST_UPDATED && STATUSES_UPDATED)	{PARKING_STAGE = RESTART; ATTEMPTS = 0;}	//	если все обновили, то идем дальше
-							else									{ATTEMPTS++;}								//	если за два сообщения не вышло, то всеравно идем дальше
+							if (LIST_UPDATED && STATUSES_UPDATED)	{DONE = 1;}			//	если все обновили, то идем дальше
+							else									{ATTEMPTS++;}		//	если за два сообщения не вышло, то всеравно идем дальше
 						}
 						break;
 
-						case SENSOR:	{give_cmd_status();}			break;
-						case SCREEN:	{prepare_message_to_screen();}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
+						case SENSOR:	{give_cmd_status();					DONE = 1;}	break;
+						case SCREEN:	{/*prepare_message_to_screen();*/	DONE = 1;}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
 					}
 
 #else
 						
 					switch (CURRENT_DEVICE_TYPE)
 					{
-						case NODE:		{/*give_cmd_status();*/}			break;	//	нас не интересуют статусы других узлов
-						case SENSOR:	{give_cmd_status();}			break;
-						case SCREEN:	{prepare_message_to_screen();}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
+						case NODE:		{/*give_cmd_status();*/				DONE = 1;}	break;	//	нас не интересуют статусы других узлов
+						case SENSOR:	{give_cmd_status(); 				DONE = 1;}	break;
+						case SCREEN:	{/*prepare_message_to_screen();*/	DONE = 1;}	break;	// в дальнейшем убереться, т.к. только HEAD обновляет экраны
 					}
-
-					PARKING_STAGE = RESTART; ATTEMPTS = 0;
 
 #endif
 
-
+					if (DONE)	{PARKING_STAGE = RESTART; ATTEMPTS = 0; DONE = 0;}
 				}
 				break;
 			}
@@ -386,17 +380,11 @@ void Parking_Space(void)
 		
 		case RESTART:
 		{
-
 #ifdef that_device_is_HEAD
-
 			LIST_UPDATED = 0;
 			STATUSES_UPDATED = 0;
-			rewrite_panels();
-
-
 #else
 #endif
-
 			choice_next_dev();
 			if(CURRENT_DEVICE == max_end_device)	{PARKING_STAGE = CICLE_DONE;}
 			else									{PARKING_STAGE = SEARCH;}
@@ -405,9 +393,13 @@ void Parking_Space(void)
 		
 		case CICLE_DONE:
 		{
-			// обновим данные на всех панелях
 
-			PARKING_STAGE = SEARCH;
+#ifdef that_device_is_HEAD
+			if (rewrite_panels())		{PARKING_STAGE = SEARCH;}	// обновим данные на всех панелях
+#else
+										 PARKING_STAGE = SEARCH;
+#endif
+
 		}
 		break;
 	}
@@ -425,10 +417,15 @@ void put_tx_pack (void)
 
 	put_string_UART2(&tx_pack[0], tx_pack[BYTE_LEN]);
 
+
 //	TIME_FOR_TIME_OUT_ACK = 1000;
 
 	SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));		//	поднимаем флаг - ожидание ACK
 	RTOS_SetTask(time_out_ACK,TIME_FOR_TIME_OUT_ACK,0);		//	время на получение всех пакетов (настроить ограничение максимального времени ожидания на датчиках)
+
+	if(		(tx_pack[BYTE_COMMAND] == 0x2C)	 || (tx_pack[BYTE_NEXT_RECEIVER_ADR] != 0x00))
+	{for (uint8_t i = 0; i < tx_pack[BYTE_LEN]; i++)	{put_byte_UART1(tx_pack[i]);}}
+	tx_pack[BYTE_COMMAND] = 0x00;
 }
 
 
@@ -468,11 +465,11 @@ void Parking_Space_Init (void)
 
 
 
-uint8_t sensor_is_live(uint8_t sens_adr)
+uint8_t sensor_is_live(uint16_t sens_adr)
 {
 	// Проверяем как помечен датчик с данным адресом (работает/неработает)
-	uint8_t byte = sens_adr/8;						//	узнаем в каком байте лежит его состояние
-	uint8_t bit = 7 - (sens_adr - (byte*8));	//	узнаем в каком бите лежит его состояние и зеркалим последовательность бит
+	uint16_t byte = sens_adr/8;						//	узнаем в каком байте лежит его состояние
+	uint16_t bit = 7 - (sens_adr - (byte*8));	//	узнаем в каком бите лежит его состояние и зеркалим последовательность бит
 
 	//	если датчик с этим имеет состояние "живой"
 	if (READ_BIT(devices_is_live[byte],(1<<bit)))	{return 1;}
@@ -625,17 +622,6 @@ void message_to_LCD1602 (void)
 		if( READ_BIT(sensors_status[0], (1<<i)) )	{string_statuses[(7-i)+8] = '1';}
 		else										{string_statuses[(7-i)+8] = '0';}
 	}
-//	for (uint8_t i = 8; i < 16; i++)	{string_statuses[i] = 0x00;}	//	кастыль для подчистки хвоста строки
-/*
-	string_statuses[8] = ' ';
-	string_statuses[9] = ' ';
-	string_statuses[10] = ' ';
-	string_statuses[11] = ' ';
-	string_statuses[12] = ' ';
-	string_statuses[13] = result_all[0];
-	string_statuses[14] = '/';
-	string_statuses[15] = result_all[2];
-*/
 
 	string_statuses[8] = 'x';
 	string_statuses[9] = 'x';
@@ -650,9 +636,7 @@ void message_to_LCD1602 (void)
 
 uint8_t rewrite_panels (void)
 {
-	uint8_t 	all_panels_is_rewrited = 0;
-
-	if (all_panels_is_rewrited)			{return 1;}
+	static uint8_t 	all_panels_is_rewrited = 0;
 
 	//	нужно отправить информацию на панель
 	//	для этого нужно знать следующее:
@@ -671,7 +655,6 @@ uint8_t rewrite_panels (void)
 	//	LAST_SENSOR			- номер последнего датчика в группе
 
 
-
 	static 	uint8_t 	PANEL_global_N = 0;
 			uint8_t 	PANEL_local_adr = 0;
 
@@ -688,19 +671,30 @@ uint8_t rewrite_panels (void)
 			uint16_t 	LAST_SENSOR_N = 0;
 
 
+	if (all_panels_is_rewrited)
+	{
+		all_panels_is_rewrited = 0;
+		PANEL_global_N = 0;
+		NODE_global_N = 0;
+		GROUP = 0;
+		RESULT = 0;
+		return 1;
+	}
+
 
 //=============	1. выгружаем список из памяти FLASH	=========================================================================================
-	Page[WORD_CNT];					//	 массив - страницa в которую мы запишем списки, чтобы не выкачивать их каждый раз из памяти
+
+//	 Page[0xFF];		//WORD_CNT				//	 массив - страницa в которую мы запишем списки, чтобы не выкачивать их каждый раз из памяти
 	//	считываем страницу
-	for (uint16_t i = 0; i < WORD_CNT; i++)		{Page[i] = read_word(LISTs + (i * WORD_ADDR_OFFSET));}	//	считываем по словам
+	for (uint8_t i = 0; i < 0xFF; i++)		{Page[i] = read_word (LISTs + (i * WORD_ADDR_OFFSET));}	//	считываем по словам
 
 //	Разделяем страницу на нужные нам списки
 
 	uint32_t 	*SUBGROUP_2_SENSORS = 	&Page[SUBGROUP_2_SENSORS_list];		//	как сгруппированы датчики в подгруппы
-	uint8_t 	*SUBGROUPS_2_GROUP = 	&Page[SUBGROUPS_2_GROUP_list];		//	как сгруппированиы подгруппы в группы
-	uint8_t 	*PANELS_2_GROUP = 		&Page[PANELS_2_GROUP_list];			//	на какие панели закреплены группы
-	uint8_t 	*PANELS_2_CONTROLLER = 	&Page[PANELS_2_CONTROLLER_list];	//	к каким контроллерам подключены панели
-	uint8_t 	*PANEL_2_LOCAL_ADDR = 	&Page[PANEL_2_LOCAL_ADDR_list];		//	локальные адреса панелей в сети собственных контроллеров
+	uint8_t 	*SUBGROUPS_2_GROUP = 	&Page[SUBGROUPS_2_GROUP_list/4];		//	как сгруппированиы подгруппы в группы
+	uint8_t 	*PANELS_2_GROUP = 		&Page[PANELS_2_GROUP_list/4];			//	на какие панели закреплены группы
+	uint8_t 	*PANELS_2_CONTROLLER = 	&Page[PANELS_2_CONTROLLER_list/4];		//	к каким контроллерам подключены панели
+	uint8_t 	*PANEL_2_LOCAL_ADDR = 	&Page[PANEL_2_LOCAL_ADDR_list/4];		//	локальные адреса панелей в сети собственных контроллеров
 
 //======================================================================================================================================================
 
@@ -717,13 +711,17 @@ uint8_t rewrite_panels (void)
 		{
 			GROUP = PANELS_2_GROUP[PANEL_global_N];	//	запомним номер группы
 			find_panel_with_group = 1;
-
-			put_byte_UART1(0xBB);
-			put_byte_UART1(GROUP);
-
+		}
+		else
+		{
+			if(PANEL_global_N >= panels)
+			{
+				PANEL_global_N = 0;
+				all_panels_is_rewrited = 1;
+			}
 		}
 
-		if(PANEL_global_N >= panels) {all_panels_is_rewrited = 1;}
+
 	}
 
 //======================================================================================================================================================
@@ -743,19 +741,22 @@ uint8_t rewrite_panels (void)
 			FIRST_SENSOR_N = 0;
 			LAST_SENSOR_N = 0;
 
-			uint32_t content =  SUBGROUP_2_SENSORS[SUBGROUP];
+			uint8_t* content = &SUBGROUP_2_SENSORS[SUBGROUP];
 
-			FIRST_SENSOR_N = 		(content >> 8) 	&& 0xFF;
-			LAST_SENSOR_N = 		 content 		&& 0xFF;
+			FIRST_SENSOR_N = 	(content[0] << 8) | content[1];
+			LAST_SENSOR_N = 	(content[2] << 8) | content[3];
 
 			for (uint16_t sensor_N = FIRST_SENSOR_N; sensor_N <= LAST_SENSOR_N; sensor_N++)
 			{
-				RESULT += sensor_is_free(sensor_N);
+//				RESULT += sensor_is_free(sensor_N);
+//				RESULT++;
+
+				RESULT = RESULT + sensor_is_live(sensor_N);
 			}
 		}
-
-		if(SUBGROUP >= subgroups) {the_result_is_calculated = 1;}
+		if(SUBGROUP >= subgroups) {the_result_is_calculated = 1; SUBGROUP = 0;}
 	}
+
 
 //======================================================================================================================================================
 
@@ -767,23 +768,48 @@ uint8_t rewrite_panels (void)
 	NODE_local_adr = NODE_global_N;
 
 	PANEL_local_adr = PANEL_2_LOCAL_ADDR[PANEL_global_N];
-
 //=======================================================================================================================================
 
 	// теперь у нас есть локальный адрес контроллера, локальный адрес панели, и результат
 
 //============ 5. собираем пакет и отправляем =======================================================================================================
+if (NODE_local_adr == 0x01)
+{
+	tx_pack[BYTE_RECEIVER_ADR] =  		PANEL_local_adr;
+}
+else
+{
+	tx_pack[BYTE_RECEIVER_ADR] =  		NODE_local_adr;
+	tx_pack[BYTE_NEXT_RECEIVER_ADR] =  	PANEL_local_adr;
+}
 
-	tx_pack[BYTE_LEN] += 1;
-	tx_pack[BYTE_DATA_OFFSET] = RESULT;		// пока так. Сами в терминале для начала посмотрим
-/*
-	put_byte_UART1(0xBB);
-	put_byte_UART1(GROUP);
-	put_byte_UART1(RESULT);
-*/
+
+tx_pack[BYTE_COMMAND] = 			CMD_WRITE_TEXT;		//	записываем команду - задать новый адрес
+tx_pack[BYTE_PARAMETER] = 			PRM_RED;			//	записываем параметр команды	- без параметра
+TIME_FOR_TIME_OUT_ACK = delay_for_cmd;
+
+char	res_live[1];
+char	res_free[1];
+char 	res_all[3];
+
+utoa(RESULT, res_live, 10);
+utoa(RESULT, res_free, 10);		//	берет значение из переменной count_free_places, приводит его в десятичный вид и записывает в строку res_free
+
+res_all[0] = res_free[0];	// res_free[0];	//	кол-во свободных мест с живых датчиков
+res_all[1] = '/';
+res_all[2] = res_live[0];	//	кол-во живый датчиков
+
+for (uint8_t i = 0; i<3; i++)	{tx_pack[BYTE_DATA_OFFSET + i] = res_all[i];}
+tx_pack[BYTE_LEN] = tx_pack[BYTE_LEN] + 3;		//	data_len;
+
+delay_ms(1);
 
 
-//	put_tx_pack();
+put_byte_UART1(0xA1);
+put_byte_UART1(GROUP);
+put_byte_UART1(RESULT);
+delay_ms(100);
+RESULT = 0;
 
 return 0;
 
@@ -791,3 +817,45 @@ return 0;
 #else
 #endif
 
+
+
+/*
+delay_ms(100);
+uint8_t pack_for_led[20];
+
+//	строим маршрут до мастера и кладем ответные данные
+pack_for_led[BYTE_LEN] =						MIN_PACK_LENGTH;		//	длина пакета (переделать на авто расчет)
+pack_for_led[BYTE_RECEIVER_ADR] =				NODE_local_adr;			//	указываем адрес
+pack_for_led[BYTE_NEXT_RECEIVER_ADR] =			PANEL_local_adr;		//	маршрут дальше первой передачи не пойдет
+pack_for_led[BYTE_ADDR_3] =						ROUTE_END;				//	этот байт можно не заполнять. его не прочтут
+pack_for_led[BYTE_PREVIOUS_SENDER_ADR] =		ROUTE_END;				//	этот байт нужно выставить в 0
+pack_for_led[BYTE_SENDER_ADR] =					MASTER;					//	собственный адрес в сети RS232
+pack_for_led[BYTE_COUNT_PACK] = 				++CURRENT_COUNT_PACK;
+
+pack_for_led[BYTE_FLAGS] =						0;						//	обнулим байт флагов
+SET_BIT(pack_for_led[BYTE_FLAGS],(1<<CMD_FLAGS_PACK));					//	ставим флаг "пакет"
+
+pack_for_led[BYTE_COMMAND] =					CMD_WRITE_TEXT;			//	записываем команду - задать новый адрес
+pack_for_led[BYTE_PARAMETER] = 					PRM_RED;				//	записываем параметр команды	- без параметра
+
+	//=====================================================================
+	char	res_live[1];
+	char	res_free[1];
+	char 	res_all[3];
+
+	utoa(RESULT, res_live, 10);
+	utoa(RESULT, res_free, 10);		//	берет значение из переменной count_free_places, приводит его в десятичный вид и записывает в строку res_free
+
+	res_all[0] = res_free[0];	// res_free[0];	//	кол-во свободных мест с живых датчиков
+	res_all[1] = '/';
+	res_all[2] = res_live[0];	//	кол-во живый датчиков
+
+	for (uint8_t i = 0; i<3; i++)	{pack_for_led[BYTE_DATA_OFFSET + i] = res_all[i];}
+	pack_for_led[BYTE_LEN] = pack_for_led[BYTE_LEN] + 3;		//	data_len;
+	delay_ms(1);
+	//=====================================================================
+
+pack_for_led[pack_for_led[BYTE_LEN]-1] =	crc8(&pack_for_led[0],pack_for_led[BYTE_LEN]-1);		//	11/12 byte:	посчитать и записать crc в пакет
+
+for(uint8_t i = 0; i < pack_for_led[BYTE_LEN]; i++)		{put_byte_UART1(pack_for_led[i]);}
+*/

@@ -40,6 +40,8 @@ void send_byte_to_uart(void);
 void system_reset(void);
 
 void write_flash_HEAD (void);
+void send_PAGE_to_uart(void);
+void clear_LISTS (void);
 
 
 #if !defined(__SOFT_FP__) && defined(__ARM_FP)
@@ -67,8 +69,6 @@ int main(void)
 //	NRF_Init();
 
 
-
-
 /*
 //	Для светодиода на плате
 	//============== Настройка вывода TX (PA9) ==================================================================================
@@ -88,116 +88,25 @@ int main(void)
 
 	Parking_Space_Init();	//	инициализируем функции системы Parking_Space
 
-/*
-			uint32_t tmp_page[20];
-			for (uint8_t i = 0; i < 10; i++)
-			{
-				tmp_page[i] = read_word ( Page_31_ADDR + (i*4) );
-
-				uint8_t pack[4];
-				pack[3] = tmp_page[i];
-				pack[2] = tmp_page[i] >> (8 * 1);
-				pack[1] = tmp_page[i] >> (8 * 2);
-				pack[0] = tmp_page[i] >> (8 * 3);
-
-				for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(pack[j]);}
-				delay_ms(100);
-			}
-
-			uint8_t *byte = &tmp_page[0];
-			for (uint8_t i = 0; i < 20; i++)
-			{
-				put_byte_UART1(byte[i]);
-				delay_ms(100);
-			}
-*/
-
-/*
-	FLASH_Unlock();								//	разблокируем память
-	FLASH_Erase_Page((uint32_t)LISTs);			//	стираем память
-	FLASH_Lock();								//	блокируем память
-*/
-
-
-
-
-	uint8_t test_pack[1024];
-	for (uint16_t  i = 0; i < 1024; i++)	{test_pack[i] = i;}
-
-	FLASH_Unlock();								//	разблокируем память
-//	FLASH_Erase_Page((uint32_t)LISTs);			//	стираем память
-//	write_Page((uint32_t)(LISTs), &test_pack[0]);	//	пишем слово в пишем в следующие 32 бита (4 байта) (max 55)
-	FLASH_Lock();								//	блокируем память
-
-
 
 #ifdef that_device_is_HEAD
 
+//	send_PAGE_to_uart();
+//	write_flash_HEAD();
+//	send_byte_to_uart();
+//	clear_LISTS();
 
-
-			uint32_t tmp_lists[32];
-			for (uint8_t i = 0; i < 0xFF; i++)		//	т.к. по 4 байты выводим то код-во циклов должно быть 255
-			{
-				tmp_lists[i] = read_word ( LISTs + (i*4) );
-
-				uint8_t pack[4];
-				pack[0] = tmp_lists[i];
-				pack[1] = tmp_lists[i] >> (8 * 1);
-				pack[2] = tmp_lists[i] >> (8 * 2);
-				pack[3] = tmp_lists[i] >> (8 * 3);
-
-				static cnt_bytes = 0;
-				for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(pack[j]); cnt_bytes++;}
-				if(cnt_bytes == 16)					{delay_ms(100); cnt_bytes = 0;}
-			}
-
-			//	write_flash_HEAD();
-			//	send_byte_to_uart();
 #else
 #endif
-/*
-			uint8_t *byte = &tmp_lists[0];
-			for(uint8_t i = 0; i < 32; i++)
-			{
-				for (uint16_t j = 0; j < 32; j++)		{put_byte_UART1(byte[j]);}
-			}
-*/
 
-/*
-	for (uint8_t i = 0; i < 32; i++)
-	{
-		uint32_t tmp_b = read_word(Page_31_ADDR + (i*4));	// adr + (32*i)
-
-		uint8_t pack[4];
-		pack[3] = tmp_b;
-		pack[2] = tmp_b >> (8 * 1);
-		pack[1] = tmp_b >> (8 * 2);
-		pack[0] = tmp_b >> (8 * 3);
-
-		for (uint8_t j = 0; j < 4; j++)		{put_byte_UART1(pack[j]);}
-
-		delay_ms(100);
-	}
-
-*/
-			uint8_t *byte;
+	uint8_t *byte;
 	uint32_t  byte_tmp = read_word(Page_30_ADDR);
 	byte = &byte_tmp;
 	adr_in_uart_1 = byte[0];
 
-/*
 	delay_ms(100);
-	put_byte_UART1(adr_in_uart_1);
-	put_byte_UART2(adr_in_uart_2);
-	put_byte_UART1(0x01);
-	put_byte_UART2(0x02);
-*/
-
-
-
-	put_byte_UART1(adr_in_uart_1);
-
-
+	put_byte_UART1(0x01); put_byte_UART1(adr_in_uart_1);
+//	put_byte_UART2(0x02); put_byte_UART2(adr_in_uart_2);
 
 	while(1)
 	{
@@ -254,7 +163,6 @@ void RCC_DeInit(void)
 }
 
 
-
 void SetSysClockTo72(void)
 {
   SET_BIT	(RCC->CR, RCC_CR_HSEON);						//	Включим наш HSE, дождавшись его стабилизации (HSI - вунтренняя RC цепочка))
@@ -302,7 +210,6 @@ void SetSysClockTo72(void)
 }
 
 
-
 void GPIO_Init (void)
 {
 	uint32_t tmpreg;	//	пока используется для задержки.
@@ -327,8 +234,9 @@ void GPIO_Init (void)
 		GPIOC->BSRR = ( 1 << LED_pin );				//	установка линии в 1
 		//GPIOC->BRR = ( 1 << LED_pin );				//	установка линии в 0
 	//==========================================================================================
-
 }
+
+
 void send_byte_to_uart(void)
 {
 //	put_byte_UART1(0xD1);
@@ -337,7 +245,7 @@ void send_byte_to_uart(void)
 //	put_byte_UART1(0xD1);
 
 //	put_byte_UART2(0xD2);
-//		put_byte_UART3(0xD3);
+//	put_byte_UART3(0xD3);
 
 	RTOS_SetTask(send_byte_to_uart, 1000, 0);
 
@@ -350,10 +258,11 @@ void send_byte_to_uart(void)
 	put_byte_UART1(sensors_status[1]);
 	put_byte_UART1(sensors_status[2]);
 	put_byte_UART1(sensors_status[3]);
-
-
-
 }
+
+
+
+#ifdef that_device_is_HEAD
 
 void write_flash_HEAD (void)
 {
@@ -516,6 +425,39 @@ void write_flash_HEAD (void)
 
 }
 
+void send_PAGE_to_uart (void)
+{
+	//	размер массива из 32-х битный элементов =  (1024 байта * 8 бит) / 32 бит = 256
+	uint32_t tmp_lists[0xFF];
+	uint8_t pack[4];
+	for (uint8_t i = 0; i < 0xFF; i++)		//	т.к. по 4 байты выводим то код-во циклов должно быть 255
+	{
+		tmp_lists[i] = read_word ( LISTs + (i*4) );		// читаем 32 бита (8 байт)
+
+		for (uint8_t k = 0; k < 4; k++)
+		{
+			pack[k] = tmp_lists[i] >> (8 * k);
+			delay_ms(1);							//	задержка, потому что не успевает сдвинуть биты
+			put_byte_UART1(pack[k]);
+
+			//	задежржка, чтобы по 16 байт в строке терминала выводилось
+			static cnt_bytes = 0;				cnt_bytes++;
+			if(cnt_bytes == 16)					{delay_ms(100); cnt_bytes = 0;}
+		}
+	}
+}
 
 
+void clear_LISTS (void)
+{
+	uint8_t test_pack[1024];
+	for (uint16_t  i = 0; i < 1024; i++)	{test_pack[i] = i;}
 
+	FLASH_Unlock();								//	разблокируем память
+//	FLASH_Erase_Page((uint32_t)LISTs);			//	стираем память
+//	write_Page((uint32_t)(LISTs), &test_pack[0]);	//	пишем слово в пишем в следующие 32 бита (4 байта) (max 55)
+	FLASH_Lock();								//	блокируем память
+}
+
+#else
+#endif

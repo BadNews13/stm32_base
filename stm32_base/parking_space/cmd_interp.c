@@ -382,7 +382,7 @@ void pack_from_uart_2_exe (void)
 
 		case our_ACK:
 		{
-			set_device_as_live(CURRENT_DEVICE);
+//			set_device_as_live(CURRENT_DEVICE);
 
 			if(	(CURRENT_COUNT_PACK	== count_from_pack) &&		//	если это ответ на текущий, отправленный пакет
 				(CURRENT_DEVICE	== adr_dev_from_pack)		)	//	адрес датчика совпадет с тем дачтиком, с которым мы работатем (с тем кому отправили прошлый пакет)
@@ -405,10 +405,11 @@ void pack_from_uart_2_exe (void)
 									{
 										// мы получили список статусов устройств от подчиненного узла
 										// нам нужно этот список перенести в соответствующее место в нашем списке
+										/*
 										put_byte_UART1(0xAA);
 										put_byte_UART1(data[0]);
 										put_byte_UART1(data[1]);
-
+*/
 										uint8_t NODE_global_N = (adr_dev_from_pack-1) * MAX_DEVICES;;
 										uint8_t dev_local_N = 0;
 										uint8_t dev_global_N = 0;
@@ -421,6 +422,8 @@ void pack_from_uart_2_exe (void)
 												dev_local_N = (byte * 8) + (7-bit);
 												dev_global_N = NODE_global_N + dev_local_N;
 
+												set_device_as_live(dev_global_N);
+
 												if (READ_BIT(data[byte], (1<<bit)))	{set_status_as_taken(dev_global_N);}
 												else								{set_status_as_free(dev_global_N);}
 											}
@@ -431,10 +434,14 @@ void pack_from_uart_2_exe (void)
 // получили статус от датчика
 									case SENSOR:
 									{
+										uint8_t dev_global_N = CURRENT_DEVICE;
+
+										set_device_as_live(dev_global_N);
+
 										switch (data[0])
 										{
-											case FREE:		{set_status_as_free(CURRENT_DEVICE);}	break;
-											case TAKEN:		{set_status_as_taken(CURRENT_DEVICE);}	break;
+											case FREE:		{set_status_as_free(dev_global_N);}	break;
+											case TAKEN:		{set_status_as_taken(dev_global_N);}break;
 											case unknown:	{}	break;
 										}
 									}
@@ -524,7 +531,6 @@ void pack_from_uart_2_exe (void)
 							break;
 						}
 
-
 #endif
 
 
@@ -547,6 +553,7 @@ void pack_from_uart_2_exe (void)
 								uint8_t byte_for_global_N = 	global_N / 8;						//	деление вернет только целую часть
 								uint8_t bit_for_global_N = 		global_N - (byte_for_global_N * 8);	//	из адреса вычитаем целую часть от деления умноженную на 8 и получим номер бита
 
+								set_device_as_live(global_N);
 
 								switch (CURRENT_DEVICE_TYPE)
 								{

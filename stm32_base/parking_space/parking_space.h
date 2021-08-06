@@ -212,7 +212,7 @@ uint8_t used_network;
 
 
 
-uint8_t sensor_is_live(uint8_t adr_sensor);		//	проверить живой ли сенсор по данному адресу
+uint8_t sensor_is_live(uint16_t adr_sensor);		//	проверить живой ли сенсор по данному адресу
 uint8_t sensor_is_free(uint16_t adr_sensor);		//	проверить свободно ли место по данному адресу
 
 void set_device_as_live(uint16_t _sensor);		//	пометить сенсор как мертвый
