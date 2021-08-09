@@ -102,12 +102,24 @@ void time_out_ACK (void)
 //	if (CURRENT_DEVICE == 3)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
 
 
-	for (uint8_t i = 0; i<30; i++)
+	for (uint8_t i = 0; i<30; i++){}
 
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
 
 	if (!(ADDR_OF_SELECTED_DEVICE == IS_NONAME))	{PARKING_STAGE = SWITCH;}
+/*
 	if (!tx_pack[BYTE_PREVIOUS_SENDER_ADR])			{set_device_as_dead(ADDR_OF_SELECTED_DEVICE);}	//	если отправленный пакет не имеет другого отправителя в своем адресе, то он наш => пометим устройство как мертвое
+	else
+	{
+		for (uint8_t device_under_slave = 0; device_under_slave < MAX_DEVICES; device_under_slave++)
+		{
+			uint8_t dev_local_N = device_under_slave;
+			uint8_t dev_global_N = ((tx_pack[BYTE_PREVIOUS_SENDER_ADR] - 1) * MAX_DEVICES) + dev_local_N;
+
+			set_device_as_dead(dev_global_N);
+		}
+	}
+	*/
 }
 
 
@@ -120,19 +132,19 @@ uint8_t free_address (uint8_t type_dev)
 	{
 		case SCREEN:
 		{
-			for (uint8_t i = 1; i<max_end_device; i++)	{	if(!sensor_is_live(i))	{new_adr = i;}	}	//	��������� �� ��������� �������
+			for (uint8_t i = 1; i<max_end_device; i++)	{	if(!device_is_live(i))	{new_adr = i;}	}	//	��������� �� ��������� �������
 		}
 		break;
 		
 		case SENSOR:
 		{
-			for (uint8_t i = max_end_device; i>1; i--)	{	if(!sensor_is_live(i))	{new_adr = i;}	}	//	������ �� ��������� �������
+			for (uint8_t i = max_end_device; i>1; i--)	{	if(!device_is_live(i))	{new_adr = i;}	}	//	������ �� ��������� �������
 		}
 		break;
 		
 		case NODE:
 		{
-			for (uint8_t i = max_end_device; i>1; i--)	{	if(!sensor_is_live(i))	{new_adr = i;}	}	//	������ �� ��������� �������
+			for (uint8_t i = max_end_device; i>1; i--)	{	if(!device_is_live(i))	{new_adr = i;}	}	//	������ �� ��������� �������
 		}
 		break;
 	}
@@ -155,7 +167,7 @@ void prepare_message_to_screen (void)
 	{
 		if (i != ADDR_OF_SELECTED_DEVICE)					//	проходим по все устройствам из памяти кроме текущего, т.к. текущий - экран
 		{
-			if (sensor_is_live(i))
+			if (device_is_live(i))
 			{
 				count_live_devices++;						//	сколько всего устройств живы в данный момент
 				count_free_places += sensor_is_free(i);		//	сколько из них свободны
@@ -315,7 +327,7 @@ void Parking_Space_Init (void)
 
 
 
-uint8_t sensor_is_live(uint16_t sens_adr)
+uint8_t device_is_live(uint16_t sens_adr)
 {
 	// Проверяем как помечен датчик с данным адресом (работает/неработает)
 	uint16_t byte = sens_adr/8;						//	узнаем в каком байте лежит его состояние
@@ -402,7 +414,7 @@ void message_to_LCD1602 (void)
 	{
 	//	if (i != CURRENT_DEVICE)							//	проходим по все устройствам из памяти кроме текущего, т.к. текущий - экран
 		{
-			if (sensor_is_live(i))							//	проверяем статус жизни данного устройства
+			if (device_is_live(i))							//	проверяем статус жизни данного устройства
 			{
 				count_live_devices++;						//	сколько всего устройств живы в данный момент
 				count_free_places += sensor_is_free(i);		//	сколько из них свободны
@@ -598,10 +610,16 @@ uint8_t rewrite_panels (void)
 
 			for (uint16_t sensor_N = FIRST_SENSOR_N; sensor_N <= LAST_SENSOR_N; sensor_N++)
 			{
+				// сначало проверим жив ли узел
+				uint8_t node_global_adr = (sensor_N / MAX_DEVICES) + 1;	//
+				if(device_is_live(node_global_adr))
+				{
+					RESULT = RESULT + device_is_live(sensor_N);
+				}
 //				RESULT += sensor_is_free(sensor_N);
 //				RESULT++;
 
-				RESULT = RESULT + sensor_is_live(sensor_N);
+				//RESULT = RESULT + sensor_is_live(sensor_N);
 			}
 		}
 		if(SUBGROUP >= subgroups) {the_result_is_calculated = 1; SUBGROUP = 0;}
@@ -659,6 +677,15 @@ put_byte_UART1(0xA1);
 put_byte_UART1(GROUP);
 put_byte_UART1(RESULT);
 delay_ms(100);
+
+put_byte_UART1(devices_is_live[0]);
+put_byte_UART1(devices_is_live[1]);
+put_byte_UART1(devices_is_live[2]);
+put_byte_UART1(devices_is_live[3]);
+put_byte_UART1(devices_is_live[4]);
+put_byte_UART1(devices_is_live[5]);
+delay_ms(1000);
+
 RESULT = 0;
 
 return 0;

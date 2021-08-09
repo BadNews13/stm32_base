@@ -419,16 +419,16 @@ void pack_from_uart_2_exe (void)
 										{
 											for (uint8_t byte = 0; byte < data_size; byte++)
 											{
-												for (int bit = 7; bit >= 0; bit--)
-												//for (uint8_t bit = 0; bit < 8; bit++)
+												//for (int bit = 7; bit >= 0; bit--)
+												for (uint8_t bit = 0; bit < 8; bit++)
 												{
 													dev_local_N = (byte * 8) + (7-bit);
 													dev_global_N = NODE_global_N + dev_local_N;
 
-													set_device_as_live(dev_global_N);
+													//set_device_as_live(dev_global_N);
 
-													if (READ_BIT(data[byte], (1<<bit)))	{set_status_as_taken(dev_global_N);}
-													else								{set_status_as_free(dev_global_N);}
+													if (READ_BIT(data[byte], (1<<(7-bit))))	{set_status_as_taken(dev_global_N);}
+													else									{set_status_as_free(dev_global_N);}
 													cnt_max_dev++;
 												}
 											}
@@ -468,25 +468,41 @@ void pack_from_uart_2_exe (void)
 											// мы получили список живых устройств от подчиненного узла
 											// нам нужно этот список перенести в соответствующее место в нашем списке
 
-											uint8_t NODE_global_N = (adr_dev_from_pack -1) * MAX_DEVICES;;
+											uint8_t NODE_global_N = (adr_dev_from_pack - 1) * MAX_DEVICES + 1;
 											uint8_t dev_local_N = 0;
 											uint8_t dev_global_N = 0;
 
 											uint8_t cnt_max_dev = 0;	//	устройств может быть не ровно на пришедшее кол-во байт (например 10 устройств на 2 байта - будут свободные биты)
-											if (cnt_max_dev < MAX_DEVICES)
-											{
+
 												for (uint8_t byte = 0; byte < data_size; byte++)
 												{
-													for (int bit = 7; bit >= 0; bit--)
-													//for (uint8_t bit = 0; bit < 8; bit++)
+													for (uint8_t bit = 0; bit < 8; bit++)	//for (int bit = 7; bit >= 0; bit--)
 													{
-														dev_local_N = (byte * 8) + (7-bit);
-														dev_global_N = NODE_global_N + dev_local_N;
 
-														if (READ_BIT(data[byte], (1<<bit)))	{set_device_as_live(dev_global_N);}
-														else								{set_device_as_dead(dev_global_N);}
-														cnt_max_dev++;
-													}
+														dev_local_N = (byte * 8) + bit;
+														dev_global_N = NODE_global_N + (byte * 8) + bit - 1;
+
+													//	put_byte_UART1(NODE_global_N);
+													//	put_byte_UART1(dev_global_N);
+													//	put_byte_UART1(dev_local_N);
+													//	put_byte_UART1(0xF1);
+
+														if (cnt_max_dev < MAX_DEVICES)
+														{
+															if (READ_BIT(data[byte], (1<<(7-bit))))
+															{
+																set_device_as_live(dev_global_N);
+														//		put_byte_UART1(0x01);
+															}
+															else
+															{
+																set_device_as_dead(dev_global_N);
+																put_byte_UART1(0x00);
+
+															}
+														//	delay_ms(500);
+															cnt_max_dev++;
+														}
 												}
 											}
 											LIST_UPDATED = 1;
