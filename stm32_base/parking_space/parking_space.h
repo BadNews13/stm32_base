@@ -133,7 +133,7 @@ uint8_t used_network;
 		#define	DETECTED			0x0C			//	устройство определен
 		#define	DEFINED				0x0E
 		#define	ASSIGNED			0x0F
-		#define RESTART				0x00		//NEXT_DEVICE
+		#define SWITCH				0x00
 		#define CICLE_DONE			0x10
 		
 		#define IS_NONAME	0xFF

@@ -414,18 +414,23 @@ void pack_from_uart_2_exe (void)
 										uint8_t dev_local_N = 0;
 										uint8_t dev_global_N = 0;
 
-										for (uint8_t byte = 0; byte < data_size; byte++)
+										uint8_t cnt_max_dev = 0;	//	устройств может быть не ровно на пришедшее кол-во байт (например 10 устройств на 2 байта - будут свободные биты)
+										if (cnt_max_dev < MAX_DEVICES)
 										{
-											for (int bit = 7; bit >= 0; bit--)
-											//for (uint8_t bit = 0; bit < 8; bit++)
+											for (uint8_t byte = 0; byte < data_size; byte++)
 											{
-												dev_local_N = (byte * 8) + (7-bit);
-												dev_global_N = NODE_global_N + dev_local_N;
+												for (int bit = 7; bit >= 0; bit--)
+												//for (uint8_t bit = 0; bit < 8; bit++)
+												{
+													dev_local_N = (byte * 8) + (7-bit);
+													dev_global_N = NODE_global_N + dev_local_N;
 
-												set_device_as_live(dev_global_N);
+													set_device_as_live(dev_global_N);
 
-												if (READ_BIT(data[byte], (1<<bit)))	{set_status_as_taken(dev_global_N);}
-												else								{set_status_as_free(dev_global_N);}
+													if (READ_BIT(data[byte], (1<<bit)))	{set_status_as_taken(dev_global_N);}
+													else								{set_status_as_free(dev_global_N);}
+													cnt_max_dev++;
+												}
 											}
 										}
 										STATUS_UPDATED = 1;
@@ -467,17 +472,21 @@ void pack_from_uart_2_exe (void)
 											uint8_t dev_local_N = 0;
 											uint8_t dev_global_N = 0;
 
-
-											for (uint8_t byte = 0; byte < data_size; byte++)
+											uint8_t cnt_max_dev = 0;	//	устройств может быть не ровно на пришедшее кол-во байт (например 10 устройств на 2 байта - будут свободные биты)
+											if (cnt_max_dev < MAX_DEVICES)
 											{
-												for (int bit = 7; bit >= 0; bit--)
-												//for (uint8_t bit = 0; bit < 8; bit++)
+												for (uint8_t byte = 0; byte < data_size; byte++)
 												{
-													dev_local_N = (byte * 8) + (7-bit);
-													dev_global_N = NODE_global_N + dev_local_N;
+													for (int bit = 7; bit >= 0; bit--)
+													//for (uint8_t bit = 0; bit < 8; bit++)
+													{
+														dev_local_N = (byte * 8) + (7-bit);
+														dev_global_N = NODE_global_N + dev_local_N;
 
-													if (READ_BIT(data[byte], (1<<bit)))	{set_device_as_live(dev_global_N);}
-													else								{set_device_as_dead(dev_global_N);}
+														if (READ_BIT(data[byte], (1<<bit)))	{set_device_as_live(dev_global_N);}
+														else								{set_device_as_dead(dev_global_N);}
+														cnt_max_dev++;
+													}
 												}
 											}
 											LIST_UPDATED = 1;

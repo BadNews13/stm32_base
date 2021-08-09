@@ -106,7 +106,7 @@ void time_out_ACK (void)
 
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
 
-	if (!(ADDR_OF_SELECTED_DEVICE == IS_NONAME))	{PARKING_STAGE = RESTART;}
+	if (!(ADDR_OF_SELECTED_DEVICE == IS_NONAME))	{PARKING_STAGE = SWITCH;}
 	if (!tx_pack[BYTE_PREVIOUS_SENDER_ADR])			{set_device_as_dead(ADDR_OF_SELECTED_DEVICE);}	//	если отправленный пакет не имеет другого отправителя в своем адресе, то он наш => пометим устройство как мертвое
 }
 
@@ -768,7 +768,7 @@ void Parking_Space(void)
 
 		//	if 		(ATTEMPTS > 1)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
 			if 		(DONE)				{PARKING_STAGE = DETECTED;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
-			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
+			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = SWITCH;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
 			else						{ATTEMPTS++;}											//	продолжаем попытки
 		}
 		break;
@@ -786,7 +786,7 @@ void Parking_Space(void)
 
 			if 		(ATTEMPTS > 0)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
 			if 		(DONE)				{PARKING_STAGE = DEFINED;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
-			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
+			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = SWITCH;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
 			else						{ATTEMPTS++;}											//	продолжаем попытки
 		}
 		break;
@@ -831,14 +831,14 @@ void Parking_Space(void)
 #else
 			if 		(ATTEMPTS > 0)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
 #endif
-			if 		(DONE)				{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
-			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
+			if 		(DONE)				{PARKING_STAGE = SWITCH;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
+			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = SWITCH;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
 			else	{ATTEMPTS++;}																//	продолжаем попытки
 
 		}
 		break;
 
-		case RESTART:
+		case SWITCH:
 		{
 			STATUS_UPDATED = 0;
 
@@ -855,25 +855,15 @@ void Parking_Space(void)
 
 		case CICLE_DONE:
 		{
-
 #ifdef that_device_is_HEAD
-			if (rewrite_panels())		{PARKING_STAGE = SEARCH;}	// обновим данные на всех панелях
-#else
-										 PARKING_STAGE = SEARCH;
-#endif
-
-/*
-#ifdef that_device_is_HEAD
-			if 		(ATTEMPTS > 1)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
+			if 		(rewrite_panels())	{DONE = 1;}
+			if 		(ATTEMPTS > panels)	{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
 #else
 			if 		(ATTEMPTS > 0)		{ATTEMPTS = OVER;}										//	допустимое кол-во попыток для данного блока
 #endif
-			if 		(DONE)				{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
-			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = RESTART;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
+			if 		(DONE)				{PARKING_STAGE = SWITCH;	DONE = 0;	ATTEMPTS = 0;}	//	нашли устройство и передаем управление в другой блок
+			else if	(ATTEMPTS >= OVER)	{PARKING_STAGE = SWITCH;	DONE = 0;	ATTEMPTS = 0;}	//	не нашли устройство за отведенное кол-во попыток и перезапускаем цикл
 			else	{ATTEMPTS++;}																//	продолжаем попытки
-
-*/
-
 		}
 		break;
 	}
