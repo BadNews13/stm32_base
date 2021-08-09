@@ -382,7 +382,7 @@ void pack_from_uart_2_exe (void)
 
 		case our_ACK:
 		{
-//			set_device_as_live(CURRENT_DEVICE);
+			set_device_as_live(adr_dev_from_pack);
 
 			if(	(CURRENT_COUNT_PACK	== count_from_pack) &&		//	если это ответ на текущий, отправленный пакет
 				(ADDR_OF_SELECTED_DEVICE	== adr_dev_from_pack)		)	//	адрес датчика совпадет с тем дачтиком, с которым мы работатем (с тем кому отправили прошлый пакет)
@@ -405,11 +405,7 @@ void pack_from_uart_2_exe (void)
 									{
 										// мы получили список статусов устройств от подчиненного узла
 										// нам нужно этот список перенести в соответствующее место в нашем списке
-										/*
-										put_byte_UART1(0xAA);
-										put_byte_UART1(data[0]);
-										put_byte_UART1(data[1]);
-*/
+
 										uint8_t NODE_global_N = (adr_dev_from_pack-1) * MAX_DEVICES;;
 										uint8_t dev_local_N = 0;
 										uint8_t dev_global_N = 0;
@@ -419,7 +415,6 @@ void pack_from_uart_2_exe (void)
 										{
 											for (uint8_t byte = 0; byte < data_size; byte++)
 											{
-												//for (int bit = 7; bit >= 0; bit--)
 												for (uint8_t bit = 0; bit < 8; bit++)
 												{
 													dev_local_N = (byte * 8) + (7-bit);
@@ -474,35 +469,19 @@ void pack_from_uart_2_exe (void)
 
 											uint8_t cnt_max_dev = 0;	//	устройств может быть не ровно на пришедшее кол-во байт (например 10 устройств на 2 байта - будут свободные биты)
 
-												for (uint8_t byte = 0; byte < data_size; byte++)
+											for (uint8_t byte = 0; byte < data_size; byte++)
+											{
+												for (uint8_t bit = 0; bit < 8; bit++)
 												{
-													for (uint8_t bit = 0; bit < 8; bit++)	//for (int bit = 7; bit >= 0; bit--)
+													dev_local_N = (byte * 8) + bit;
+													dev_global_N = NODE_global_N + (byte * 8) + bit - 1;
+
+													if (cnt_max_dev < MAX_DEVICES)
 													{
-
-														dev_local_N = (byte * 8) + bit;
-														dev_global_N = NODE_global_N + (byte * 8) + bit - 1;
-
-													//	put_byte_UART1(NODE_global_N);
-													//	put_byte_UART1(dev_global_N);
-													//	put_byte_UART1(dev_local_N);
-													//	put_byte_UART1(0xF1);
-
-														if (cnt_max_dev < MAX_DEVICES)
-														{
-															if (READ_BIT(data[byte], (1<<(7-bit))))
-															{
-																set_device_as_live(dev_global_N);
-														//		put_byte_UART1(0x01);
-															}
-															else
-															{
-																set_device_as_dead(dev_global_N);
-																put_byte_UART1(0x00);
-
-															}
-														//	delay_ms(500);
-															cnt_max_dev++;
-														}
+														if (READ_BIT(data[byte], (1<<(7-bit))))		{set_device_as_live(dev_global_N);}
+														else										{set_device_as_dead(dev_global_N);}
+														cnt_max_dev++;
+													}
 												}
 											}
 											LIST_UPDATED = 1;
