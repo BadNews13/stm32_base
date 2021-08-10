@@ -284,10 +284,11 @@ void put_tx_pack (void)
 
 	SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));		//	поднимаем флаг - ожидание ACK
 	RTOS_SetTask(time_out_ACK,TIME_FOR_TIME_OUT_ACK,0);		//	время на получение всех пакетов (настроить ограничение максимального времени ожидания на датчиках)
-
+/*
 	if(		(tx_pack[BYTE_COMMAND] == 0x2C)	 || (tx_pack[BYTE_NEXT_RECEIVER_ADR] != 0x00))
 	{for (uint8_t i = 0; i < tx_pack[BYTE_LEN]; i++)	{put_byte_UART1(tx_pack[i]);}}
 	tx_pack[BYTE_COMMAND] = 0x00;
+	*/
 }
 
 
@@ -670,6 +671,8 @@ res_all[2] = res_live[0];	//	кол-во живый датчиков
 for (uint8_t i = 0; i<3; i++)	{tx_pack[BYTE_DATA_OFFSET + i] = res_all[i];}
 tx_pack[BYTE_LEN] = tx_pack[BYTE_LEN] + 3;		//	data_len;
 
+
+/*
 delay_ms(1);
 
 
@@ -685,7 +688,7 @@ put_byte_UART1(devices_is_live[3]);
 put_byte_UART1(devices_is_live[4]);
 put_byte_UART1(devices_is_live[5]);
 delay_ms(1000);
-
+*/
 RESULT = 0;
 
 return 0;

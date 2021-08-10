@@ -15,13 +15,12 @@ uint8_t find_pack_from_uart_1 (void)
 
 //====================================================================================================
 
-	for(uint8_t i = 0; i < uart1_rx_buf_size; i++) 		{pack_for_me_from_uart_1[i] = 0x00;}
+	for(uint8_t i = 0; i < uart1_rx_buf_size; i++) 		{pack_for_me_from_uart_1[i] = 0x00;}	//	clear rx_pack
 
-	//	for cycle and start from zero index
-	static uint8_t start_position = 0xFF;
-	start_position++;
-	if (start_position >= uart1_rx_buf_size)	{start_position = 0;}
+	static uint8_t start_position = 0xFF;	//	for cycle and start from zero index
+	start_position++;	if (start_position >= uart1_rx_buf_size)	{start_position = 0;}
 
+//	выбираем позиции предпологаемых системных байт пакета
 //====================================================================================================
 
 	//	get index for byte with length
@@ -42,6 +41,8 @@ uint8_t find_pack_from_uart_1 (void)
 
 //====================================================================================================
 
+// проверяем предпологаемы системные байты на соответствие
+//====================================================================================================
 	//	check length
 	if (uart1_rx_buf[byte_LENGTH_index] > MAX_PACK_LENGTH)					{return 0;}
 	if (uart1_rx_buf[byte_LENGTH_index] < MIN_PACK_LENGTH)					{return 0;}
@@ -53,7 +54,7 @@ uint8_t find_pack_from_uart_1 (void)
 	if (!(READ_BIT(uart1_rx_buf[byte_FLAGS_index], (1<<CMD_FLAGS_PACK))))	{return 0;}
 
 	//	check crc
-	if (start_position + uart1_rx_buf[byte_LENGTH_index] >= uart1_rx_buf_size)
+	if (start_position + uart1_rx_buf[byte_LENGTH_index] > uart1_rx_buf_size)	// было >=
 	{
 		uint8_t crc = 0;
 
@@ -69,6 +70,7 @@ uint8_t find_pack_from_uart_1 (void)
 	{
 		if(	uart1_rx_buf[byte_CRC_index] != crc8(&uart1_rx_buf[start_position],uart1_rx_buf[byte_LENGTH_index]-1))	{return 0;}
 	}
+//====================================================================================================
 
 
 
