@@ -11,13 +11,13 @@
 
 uint8_t find_ACK (void)
 {
-	//	for cycle and start from zero index
-	static uint8_t start_idx = uart2_rx_buf_size;	//	offset
-	start_idx++;
-	if (start_idx >= uart2_rx_buf_size)	{start_idx = 0;}
 
-	static uint8_t cnt = 0;
-	cnt++;
+	for(uint8_t i = 0; i < uart2_rx_buf_size; i++) 		{pack_for_me_from_uart_2[i] = 0x00;}	//	clear rx_pack
+
+	//	for cycle and start from zero index
+	static uint8_t start_idx = uart2_rx_buf_size;							//	offset
+	start_idx++;	if (start_idx >= uart2_rx_buf_size)	{start_idx = 0;}
+
 
 //====================================================================================================
 
@@ -59,7 +59,7 @@ uint8_t find_ACK (void)
 
 
 	//	check crc
-	if (start_idx + uart2_rx_buf[byte_LENGTH_index] >= uart2_rx_buf_size)
+	if (start_idx + uart2_rx_buf[byte_LENGTH_index] > uart2_rx_buf_size)	//	было >=
 	{
 		uint8_t static crc = 0;
 
@@ -69,11 +69,11 @@ uint8_t find_ACK (void)
 		crc = 	crc8_parts(	0,		&uart2_rx_buf[start_idx],		first_part_cnt);
 		crc = 	crc8_parts(	crc,	&uart2_rx_buf[0],				second_part_cnt	- 1);
 
-		if(uart2_rx_buf[byte_CRC_index] != crc) {cnt = 0; return 0;}
+		if(uart2_rx_buf[byte_CRC_index] != crc) {return 0;}
 	}
 	else
 	{
-		if(	uart2_rx_buf[byte_CRC_index] != crc8(&uart2_rx_buf[start_idx],uart2_rx_buf[byte_LENGTH_index]-1))	{cnt = 0; return 0;}
+		if(	uart2_rx_buf[byte_CRC_index] != crc8(&uart2_rx_buf[start_idx],uart2_rx_buf[byte_LENGTH_index]-1))	{return 0;}
 	}
 
 
