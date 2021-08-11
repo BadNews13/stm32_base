@@ -282,10 +282,10 @@ void write_flash_HEAD (void)
 //===	подгруппа №1	=====================================================
 	// first_sensor
 	HEAD_memory[SUBGROUP_2_SENSORS_list + 4] = 0x00;
-	HEAD_memory[SUBGROUP_2_SENSORS_list + 5] = 0x20;	//	dec: 32
+	HEAD_memory[SUBGROUP_2_SENSORS_list + 5] = 0x0C;	//	dec: 12
 	// last_sensor
 	HEAD_memory[SUBGROUP_2_SENSORS_list + 6] = 0x00;
-	HEAD_memory[SUBGROUP_2_SENSORS_list + 7] = 0x21;	//	dea: 33
+	HEAD_memory[SUBGROUP_2_SENSORS_list + 7] = 0x0D;	//	dea: 13
 //===========================================================================
 //===	подгруппа №2	=====================================================
 	// first_sensor

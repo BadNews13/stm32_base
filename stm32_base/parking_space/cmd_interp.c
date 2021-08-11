@@ -513,8 +513,8 @@ void pack_from_uart_2_exe (void)
 									{
 										switch (data[0])
 										{
-											case FREE:		{set_status_as_free(adr_dev_from_pack);}		break;		//	пометить место как свободное
-											case TAKEN:		{set_status_as_taken(adr_dev_from_pack);}		break;		//	пометить место как занятое
+											case FREE:		{set_status_as_free(ADDR_OF_SELECTED_DEVICE);}		break;		//	пометить место как свободное
+											case TAKEN:		{set_status_as_taken(ADDR_OF_SELECTED_DEVICE);}		break;		//	пометить место как занятое
 											case unknown:	{}												break;		//	состояние парковочного места неизвестно (возможно это экран)
 										}
 									}

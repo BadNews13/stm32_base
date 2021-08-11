@@ -76,8 +76,12 @@ void give_addess (uint8_t dev_type)
 
 void rebuild_for_resend (uint8_t *pack)
 {
+	uint8_t byte_adr = pack[BYTE_RECEIVER_ADR];
+	if (byte_adr != 0x00)
+	{
 	// пересылка по адресам осуществляется в прямой последовательности по указанным адресам вне зависимости от направления пересылки
 	for (uint8_t i = BYTE_RECEIVER_ADR; i<BYTE_SENDER_ADR; i++)		{pack[i] = pack[i+1];}						//	сдвинем адреса
+	}
 
 	//		если получает мастер				или		стоит флаг ACK пакета									//	то шлем вверх
 	if (	pack[BYTE_RECEIVER_ADR] == MASTER	||		READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG))		)
@@ -98,19 +102,14 @@ void rebuild_for_resend (uint8_t *pack)
 
 void time_out_ACK (void)
 {	
-//	if (CURRENT_DEVICE == 2)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
-//	if (CURRENT_DEVICE == 3)	{put_byte_UART1(CURRENT_DEVICE); for (uint8_t i = 0; i < 30; i++)	{put_byte_UART1(uart2_rx_buf[i]);}}
-
-
-	for (uint8_t i = 0; i<30; i++){}
-
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<waiting_ACK));	//	снимаем флаг - ждем ACK
 
 	if (!(ADDR_OF_SELECTED_DEVICE == IS_NONAME))	{PARKING_STAGE = SWITCH;}
-/*
+
 	if (!tx_pack[BYTE_PREVIOUS_SENDER_ADR])			{set_device_as_dead(ADDR_OF_SELECTED_DEVICE);}	//	если отправленный пакет не имеет другого отправителя в своем адресе, то он наш => пометим устройство как мертвое
-	else
+//	else
 	{
+		/*
 		for (uint8_t device_under_slave = 0; device_under_slave < MAX_DEVICES; device_under_slave++)
 		{
 			uint8_t dev_local_N = device_under_slave;
@@ -118,8 +117,8 @@ void time_out_ACK (void)
 
 			set_device_as_dead(dev_global_N);
 		}
+		*/
 	}
-	*/
 }
 
 
@@ -898,5 +897,4 @@ void Parking_Space(void)
 		break;
 	}
 		if (tx_pack[BYTE_COMMAND]) 		{put_tx_pack();}
-			else {/*put_byte_to_soft_uart(0xFA);*/}
 }
