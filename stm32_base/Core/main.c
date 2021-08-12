@@ -248,7 +248,7 @@ void send_byte_to_uart(void)
 //	put_byte_UART3(0xD3);
 
 	RTOS_SetTask(send_byte_to_uart, 1000, 0);
-
+/*
 	put_byte_UART1(devices_is_live[0]);
 	put_byte_UART1(devices_is_live[1]);
 	put_byte_UART1(devices_is_live[2]);
@@ -258,6 +258,11 @@ void send_byte_to_uart(void)
 	put_byte_UART1(sensors_status[1]);
 	put_byte_UART1(sensors_status[2]);
 	put_byte_UART1(sensors_status[3]);
+*/
+	for (uint8_t i = 0; i < uart1_rx_buf_size; i++)
+	{
+		put_byte_UART2(uart1_rx_buf[i]);
+	}
 }
 
 

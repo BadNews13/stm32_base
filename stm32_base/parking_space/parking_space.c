@@ -390,9 +390,11 @@ void trigger (void)	//	входное значение - желаемое дей
 	uint8_t STATUS = Parking_Space_STATUS;
 	__enable_irq ();  // разрешить прерывания
 
-	static uint8_t check_cmd = 1;
-	if (check_cmd)		{check_cmd = 0;		SET_BIT (Parking_Space_STATUS,	(1<<check_CMD));}
-	else				{check_cmd = 1;}
+	//===== переходим в поиск команды от мастера каждый второй раз ==========================================
+		static uint8_t check_cmd = 1;
+		if (check_cmd)		{check_cmd = 0;		SET_BIT (Parking_Space_STATUS,	(1<<check_CMD));}
+		else				{check_cmd = 1;}
+	//=======================================================================================================
 
 	if (READ_BIT(STATUS,(1<<check_CMD)))			{Parking_Space_CONTROL = DO_PARSING_CMD;	return;}
 	if (READ_BIT(STATUS,(1<<CMD_ready)))			{Parking_Space_CONTROL = DO_CMD_EXE;		return;}
@@ -400,7 +402,6 @@ void trigger (void)	//	входное значение - желаемое дей
 	if (READ_BIT(STATUS,(1<<waiting_ACK)))			{Parking_Space_CONTROL = DO_PARSING_ACK;	return;}
 
 	if (READ_BIT(STATUS,(1<<Parking_Space_AUTO))) 	{Parking_Space_CONTROL = DO_PARKING_SPACE;}
-
 }
 
 

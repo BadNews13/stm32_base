@@ -91,7 +91,8 @@ void uart1_dmaRX_init(void)
 
 	SET_BIT		(USART1->CR3, USART_CR3_DMAR);				//	Enable DMA Mode for reception
 
-	SET_BIT		(DMA1_Channel5->CCR, DMA_CCR5_TCIE);		//	Enable Channel 5 Transfer complete interrupt
+//	SET_BIT		(DMA1_Channel5->CCR, DMA_CCR5_TCIE);		//	Enable Channel 5 Transfer complete interrupt
+	CLEAR_BIT	(DMA1_Channel5->CCR, DMA_CCR5_TCIE);		//	Enable Channel 5 Transfer complete interrupt
 	SET_BIT		(DMA1_Channel5->CCR, DMA_CCR5_TEIE);		//	Enable Channel 5 Transfer error interrupt
 
 

@@ -22,7 +22,7 @@ volatile uint8_t uart1_fl_rx;
 //#define	USART1_TX_pin_remaped	6
 //#define	USART1_RX_pin_remaped	7
 
-char 	uart1_tx_buf[uart1_tx_buf_size];
+char 		uart1_tx_buf[uart1_tx_buf_size];
 uint8_t 	uart1_rx_buf[uart1_rx_buf_size];
 
 void uart1_init (uint32_t BaudRate);
