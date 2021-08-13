@@ -146,7 +146,7 @@ void pack_from_uart_1_exe (void)
 					{
 						case LIST_STATUSES:		//	запрос состояния парковочных мест из памяти
 						{
-							for(uint8_t i = 0; i<len_offset; i++)	{tx_pack[BYTE_DATA_OFFSET+i] = sensors_status[i];}
+							for(uint8_t i = 0; i < len_offset; i++)	{tx_pack[BYTE_DATA_OFFSET+i] = sensors_status[i];}
 						}
 						break;
 
@@ -337,7 +337,7 @@ void pack_from_uart_1_exe (void)
 			{
 				//	считаем crc пакета и кладем в пакет
 				tx_pack[tx_pack[BYTE_LEN]-1] =	crc8(&tx_pack[0],tx_pack[BYTE_LEN]-1);		//	11/12 byte:	посчитать и записать crc в пакет
-				for (uint8_t i = 0; i< tx_pack[BYTE_LEN]; i++)		{put_byte_UART1(tx_pack[i]);}						//	отправляем в RS485
+				for (uint8_t i = 0; i < tx_pack[BYTE_LEN]; i++)		{put_byte_UART1(tx_pack[i]);}						//	отправляем в RS485
 			}
 
 		}
@@ -406,11 +406,39 @@ void pack_from_uart_2_exe (void)
 										// мы получили список статусов устройств от подчиненного узла
 										// нам нужно этот список перенести в соответствующее место в нашем списке
 
-										uint8_t NODE_global_N = (adr_dev_from_pack-1) * MAX_DEVICES;;
+										uint8_t NODE_global_N = (adr_dev_from_pack - 1) * MAX_DEVICES + 1;
 										uint8_t dev_local_N = 0;
 										uint8_t dev_global_N = 0;
 
 										uint8_t cnt_max_dev = 0;	//	устройств может быть не ровно на пришедшее кол-во байт (например 10 устройств на 2 байта - будут свободные биты)
+
+										for (uint8_t byte = 0; byte < data_size; byte++)
+										{
+											for (uint8_t bit = 0; bit < 8; bit++)
+											{
+												dev_local_N = (byte * 8) + bit;
+												dev_global_N = NODE_global_N + (byte * 8) + bit - 1;
+
+												if (cnt_max_dev < MAX_DEVICES)
+												{
+													if (READ_BIT(data[byte], (1<<(7-bit))))		{set_status_as_taken(dev_global_N);}
+													else										{set_status_as_free(dev_global_N);}
+													cnt_max_dev++;
+												}
+											}
+										}
+										STATUS_UPDATED = 1;
+
+									/*
+										// мы получили список статусов устройств от подчиненного узла
+										// нам нужно этот список перенести в соответствующее место в нашем списке
+
+										uint8_t NODE_global_N = (adr_dev_from_pack-1) * MAX_DEVICES + 1;
+										uint8_t dev_local_N = 0;
+										uint8_t dev_global_N = 0;
+
+										uint8_t cnt_max_dev = 0;	//	устройств может быть не ровно на пришедшее кол-во байт (например 10 устройств на 2 байта - будут свободные биты)
+
 										if (cnt_max_dev < MAX_DEVICES)
 										{
 											for (uint8_t byte = 0; byte < data_size; byte++)
@@ -429,6 +457,7 @@ void pack_from_uart_2_exe (void)
 											}
 										}
 										STATUS_UPDATED = 1;
+									*/
 									}
 									break;	//	обрабатываем список статусов
 // получили статус от датчика

@@ -526,7 +526,8 @@ uint8_t rewrite_panels (void)
 
 	static	uint8_t 	GROUP = 0;
 
-	static	uint16_t 	RESULT = 0;
+			uint16_t 	RESULT = 0;
+			uint16_t	LIVES = 0;
 
 
 			uint8_t 	SUBGROUP = 0;
@@ -613,10 +614,18 @@ uint8_t rewrite_panels (void)
 			{
 				// сначало проверим жив ли узел
 				uint8_t node_global_adr = (sensor_N / MAX_DEVICES) + 1;	//
+	/*
 				if(device_is_live(node_global_adr))
 				{
 					RESULT = RESULT + device_is_live(sensor_N);
 				}
+	*/
+				if(device_is_live(sensor_N))
+				{
+					LIVES = 	LIVES + device_is_live(sensor_N);
+					RESULT = 	RESULT + sensor_is_free(sensor_N);
+				}
+
 //				RESULT += sensor_is_free(sensor_N);
 //				RESULT++;
 
@@ -661,7 +670,7 @@ char	res_live[1];
 char	res_free[1];
 char 	res_all[3];
 
-utoa(RESULT, res_live, 10);
+utoa(LIVES, res_live, 10);
 utoa(RESULT, res_free, 10);		//	берет значение из переменной count_free_places, приводит его в десятичный вид и записывает в строку res_free
 
 res_all[0] = res_free[0];	// res_free[0];	//	кол-во свободных мест с живых датчиков

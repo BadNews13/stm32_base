@@ -17,7 +17,7 @@ volatile uint8_t uart1_fl_rx;
 #define	USART1_RX_pin	10
 
 #define	uart1_tx_buf_size  30					//	размер буфера отправки
-#define	uart1_rx_buf_size  30 					//	размер буфера приема
+#define	uart1_rx_buf_size  20	// 30 					//	размер буфера приема
 
 //#define	USART1_TX_pin_remaped	6
 //#define	USART1_RX_pin_remaped	7
