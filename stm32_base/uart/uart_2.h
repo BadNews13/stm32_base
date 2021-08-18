@@ -19,8 +19,8 @@
 #define	uart2_tx_buf_size  30					//	размер буфера отправки
 #define	uart2_rx_buf_size  30 					//	размер буфера приема
 
-char 	uart2_tx_buf[uart2_tx_buf_size];
-volatile uint8_t 	uart2_rx_buf[uart2_rx_buf_size];
+uint8_t volatile uart2_tx_buf[uart2_tx_buf_size];
+uint8_t volatile uart2_rx_buf[uart2_rx_buf_size];
 
 void uart2_init (uint32_t BaudRate);
 	void uart2_port_ini (void);					//	инициализирует пины TX и RX

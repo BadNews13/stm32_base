@@ -15,6 +15,8 @@ uint8_t find_pack_from_uart_1 (void)
 
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<check_CMD));
 
+	if (	READ_BIT(Parking_Space_STATUS,(1<<CMD_ready))	)	{return 0;}
+
 //====================================================================================================
 
 	for(uint8_t i = 0; i < uart1_rx_buf_size; i++) 		{pack_for_me_from_uart_1[i] = 0x00;}	//	clear rx_pack
@@ -65,6 +67,7 @@ uint8_t find_pack_from_uart_1 (void)
 	if (uart1_rx_buf[byte_COMMAND_index] < 0x20)							{return 0;}
 	if (uart1_rx_buf[byte_COMMAND_index] > 0x2F)							{return 0;}
 
+
 	//	check crc
 	if (start_position + uart1_rx_buf[byte_LENGTH_index] <= (uart1_rx_buf_size + 1)	)
 	{
@@ -76,15 +79,13 @@ uint8_t find_pack_from_uart_1 (void)
 		uint8_t second_part_cnt = 	uart1_rx_buf[byte_LENGTH_index] - first_part_cnt	;	//	количество байт вначале буфера (после перехода)
 
 //===== кастыль =================================================================================================
-		uint8_t tmp_array[uart1_rx_buf_size];
+		volatile uint8_t tmp_array[uart1_rx_buf_size];
 		for(uint8_t i = 0; i < first_part_cnt; i++ )		{tmp_array[i] = uart1_rx_buf[start_position + i];}
 		for(uint8_t i = 0; i < second_part_cnt; i++ )		{tmp_array[first_part_cnt + i] = uart1_rx_buf[i];}
 
 		if(	uart1_rx_buf[byte_CRC_index] != crc8(&tmp_array[0],tmp_array[0]-1))	{return 0;}
 //===============================================================================================================
-
 	}
-
 
 
 //====================================================================================================
@@ -104,23 +105,7 @@ uint8_t find_pack_from_uart_1 (void)
 		}
 	}
 
-//	for (uint8_t i = 0; i < pack_for_me_from_uart_1[0]; i++)	{put_byte_UART2(pack_for_me_from_uart_1[i]); }
-
-//	for (uint8_t i = 0; i < uart1_rx_buf_size; i++)				{uart1_rx_buf[i] = 0x00;}
-
-
 	SET_BIT	(Parking_Space_STATUS,(1<<CMD_ready));
-
-/*
-	static uint8_t silence_now = 1;
-	if(silence_now)
-	{
-		silence_now = 0;
-		SET_BIT	(Parking_Space_STATUS,(1<<CMD_ready));
-	}else{
-		CLEAR_BIT	(Parking_Space_STATUS,(1<<CMD_ready));
-	}
-*/
 
 	return 1;
 }
