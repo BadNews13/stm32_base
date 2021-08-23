@@ -30,6 +30,8 @@
 #define BYTE_DATA_OFFSET			10			//	байт с которого начинаются данные
 //
 
+#define SEPARATOR					0xAA
+
 //флаги в пакете
 #define CMD_FLAGS_PACK				0			//	флаг "это пакет"
 #define CMD_FLAGS_ACK_FLAG			1			//	флаг "это ответ"

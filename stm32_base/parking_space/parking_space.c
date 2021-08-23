@@ -276,7 +276,15 @@ void put_tx_pack (void)
 	tx_pack[BYTE_COUNT_PACK] = ++CURRENT_COUNT_PACK;
 	tx_pack[tx_pack[BYTE_LEN]-1] =	crc8(&tx_pack[0],tx_pack[BYTE_LEN]-1);		//	11/12 byte:	посчитать и записать crc в пакет
 
-	put_string_UART2(&tx_pack[0], tx_pack[BYTE_LEN]);
+//===========	кастыль, чтобы crc проверка нормально работада	========================
+	if (tx_pack[tx_pack[BYTE_LEN]-1] == 0x00)	{tx_pack[tx_pack[BYTE_LEN]-1] = 0x01;}
+//======================================================================================
+
+	tx_pack[tx_pack[BYTE_LEN]] = SEPARATOR;
+
+	put_string_UART2(&tx_pack[0], tx_pack[BYTE_LEN]+1);
+
+//	put_byte_UART2 (SEPARATOR);
 
 
 //	TIME_FOR_TIME_OUT_ACK = 1000;

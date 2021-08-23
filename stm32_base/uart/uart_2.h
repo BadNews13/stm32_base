@@ -17,7 +17,7 @@
 #define	USART2_RX_pin	3
 
 #define	uart2_tx_buf_size  30					//	размер буфера отправки
-#define	uart2_rx_buf_size  30 					//	размер буфера приема
+#define	uart2_rx_buf_size  20 					//	размер буфера приема
 
 uint8_t volatile uart2_tx_buf[uart2_tx_buf_size];
 uint8_t volatile uart2_rx_buf[uart2_rx_buf_size];
