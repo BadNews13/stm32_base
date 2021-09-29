@@ -62,12 +62,32 @@ void pack_from_uart_1_exe (void)
 		{
 			rebuild_for_resend(&pack[0]);		//	пересоберем пакет для отправки вниз
 			pack[pack[BYTE_LEN]-1] =	crc8(&pack[0],pack[BYTE_LEN]-1);	//	11/12 byte:	посчитать и записать crc в пакет
-if(pack[pack[BYTE_LEN]-1] == 0x00) {pack[pack[BYTE_LEN]-1] = 0x01;}			// кастыль, для того, чтобы CRC расчитанная как "0x00" не совпадала с пустым байтом в буфере
-			put_string_UART2(&pack[0], pack[BYTE_LEN]);
-			put_byte_UART2 (SEPARATOR);										//	разделительный байт
+
+			if(	pack[pack[BYTE_LEN]-1] == 0x00) {pack[pack[BYTE_LEN]-1] = 0x01;}			// кастыль, для того, чтобы CRC расчитанная как "0x00" не совпадала с пустым байтом в буфере
+
+				pack[pack[BYTE_LEN]] = SEPARATOR;
+
+			put_string_UART2(&pack[0], pack[BYTE_LEN]+1);
+//			put_byte_UART2 (SEPARATOR);										//	разделительный байт
 
 			SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));
 			RTOS_SetTask(time_out_ACK,200,0);								//	запуск отсчета таймаута
+
+
+
+			for (uint8_t i = 0; i < uart1_rx_buf_size; i++)
+			{
+				pack_for_me_from_uart_1[i] = 	0x00;
+			}
+
+
+
+
+
+
+
+
+
 		}
 		break;
 

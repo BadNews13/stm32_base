@@ -100,7 +100,7 @@ uint8_t find_pack_from_uart_1 (void)
 
 
 	uint8_t size = uart1_rx_buf[byte_LENGTH_index];
-	for (uint8_t i = 0; i < (size+2); i++)		//	+1 т.е. символ SEPARATOR тоже нужно затереть
+	for (uint8_t i = 0; i < (size+1); i++)		//	+1 т.е. символ SEPARATOR тоже нужно затереть
 	{
 		if((i + start_position) < uart1_rx_buf_size)
 		{
