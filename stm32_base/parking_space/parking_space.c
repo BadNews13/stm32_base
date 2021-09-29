@@ -76,24 +76,30 @@ void give_addess (uint8_t dev_type)
 
 void rebuild_for_resend (uint8_t *pack)
 {
-	uint8_t byte_adr = pack[BYTE_RECEIVER_ADR];
-	if (byte_adr != 0x00)
+	uint8_t receiver		= pack[BYTE_RECEIVER_ADR];
+	uint8_t next_receiver 	= pack[BYTE_NEXT_RECEIVER_ADR];
+	uint8_t sender		 	= pack[BYTE_SENDER_ADR];
+
+//	uint8_t byte_adr = pack[BYTE_RECEIVER_ADR+1];
+	if (next_receiver != 0x00)
 	{
 	// пересылка по адресам осуществляется в прямой последовательности по указанным адресам вне зависимости от направления пересылки
 	for (uint8_t i = BYTE_RECEIVER_ADR; i<BYTE_SENDER_ADR; i++)		{pack[i] = pack[i+1];}						//	сдвинем адреса
 	}
 
-	//		если получает мастер				или		стоит флаг ACK пакета									//	то шлем вверх
-	if (	pack[BYTE_RECEIVER_ADR] == MASTER	||		READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG))		)
+	//		если получает мастер		или		стоит флаг ACK пакета									//	то шлем вверх
+	if (	next_receiver == MASTER		||		READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG))		)
 	{pack[BYTE_SENDER_ADR] = adr_in_uart_1;}																	//	вставляем свой адрес в сети мастера, чтобы отправить вверх
 	
-	//		если отправитель мастер		 		или		не стоит флаг ACK пакета								//	то шлем вниз
-	if (	pack[BYTE_SENDER_ADR] == MASTER		||		!READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG))	)
+	//		если отправитель мастер		или		не стоит флаг ACK пакета								//	то шлем вниз
+	if (	sender == MASTER			||		!READ_BIT(pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG))	)
 	{
 		pack[BYTE_SENDER_ADR] = 	MASTER;																			//	вставляем адрес мастера, чтобы отправить вниз
 		CURRENT_COUNT_PACK = 		pack[BYTE_COUNT_PACK];
 		ADDR_OF_SELECTED_DEVICE =	pack[BYTE_RECEIVER_ADR];
 	}
+
+	PARKING_STAGE = SEARCH;
 }
 
 

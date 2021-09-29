@@ -48,7 +48,7 @@ uint8_t find_pack_from_uart_1 (void)
 
 	//	get index for byte with separator char
 	uint8_t byte_SEPARATOR_index = start_position + uart1_rx_buf[byte_LENGTH_index];
-	if (byte_SEPARATOR_index >= uart1_rx_buf_size)		{byte_SEPARATOR_index	= 		byte_SEPARATOR_index - 		uart1_rx_buf_size;}
+	if (byte_SEPARATOR_index >= uart1_rx_buf_size)	{byte_SEPARATOR_index	= 		byte_SEPARATOR_index - 		uart1_rx_buf_size;}
 
 //====================================================================================================
 
@@ -100,9 +100,9 @@ uint8_t find_pack_from_uart_1 (void)
 
 
 	uint8_t size = uart1_rx_buf[byte_LENGTH_index];
-	for (uint8_t i = 0; i < size; i++)
+	for (uint8_t i = 0; i < (size+2); i++)		//	+1 т.е. символ SEPARATOR тоже нужно затереть
 	{
-		if(i + start_position < uart1_rx_buf_size)
+		if((i + start_position) < uart1_rx_buf_size)
 		{
 			pack_for_me_from_uart_1[i] = 	uart1_rx_buf[i + start_position];
 											uart1_rx_buf[i + start_position] 	= 0x00;

@@ -90,9 +90,9 @@ uint8_t find_ACK (void)
 //====================================================================================================
 
 	uint8_t size = uart2_rx_buf[byte_LENGTH_index];
-	for (uint8_t i = 0; i < size + 1; i++)
+	for (uint8_t i = 0; i < (size + 1); i++)
 	{
-		if(i + start_position < uart2_rx_buf_size)
+		if((i + start_position) < uart2_rx_buf_size)
 		{
 			pack_for_me_from_uart_2[i] = 	uart2_rx_buf[i + start_position];
 											uart2_rx_buf[i + start_position] 	= 0x00;

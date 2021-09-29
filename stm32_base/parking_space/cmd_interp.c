@@ -44,7 +44,10 @@ void pack_exe(void)
 
 void pack_from_uart_1_exe (void)
 {
+	if (! READ_BIT (Parking_Space_STATUS,(1<<CMD_ready)))	{return;}
+
 	CLEAR_BIT	(Parking_Space_STATUS,(1<<CMD_ready));
+
 
 	uint8_t *pack = &pack_for_me_from_uart_1[0];
 
@@ -59,12 +62,12 @@ void pack_from_uart_1_exe (void)
 		{
 			rebuild_for_resend(&pack[0]);		//	пересоберем пакет для отправки вниз
 			pack[pack[BYTE_LEN]-1] =	crc8(&pack[0],pack[BYTE_LEN]-1);	//	11/12 byte:	посчитать и записать crc в пакет
-if(pack[pack[BYTE_LEN]-1] == 0x00) {pack[pack[BYTE_LEN]-1] = 0x01;}	// кастыль, для того, чтобы CRC расчитанная как "0x00" не совпадала с пустым байтом в буфере
+if(pack[pack[BYTE_LEN]-1] == 0x00) {pack[pack[BYTE_LEN]-1] = 0x01;}			// кастыль, для того, чтобы CRC расчитанная как "0x00" не совпадала с пустым байтом в буфере
 			put_string_UART2(&pack[0], pack[BYTE_LEN]);
-			put_byte_UART2 (SEPARATOR);					//	разделительный байт
+			put_byte_UART2 (SEPARATOR);										//	разделительный байт
 
 			SET_BIT(Parking_Space_STATUS, (1<<waiting_ACK));
-			RTOS_SetTask(time_out_ACK,200,0);					//	запуск отсчета таймаута
+			RTOS_SetTask(time_out_ACK,200,0);								//	запуск отсчета таймаута
 		}
 		break;
 
@@ -91,7 +94,6 @@ if(pack[pack[BYTE_LEN]-1] == 0x00) {pack[pack[BYTE_LEN]-1] = 0x01;}	// каст�
 
 						case PRM_STOP:
 						{
-
 							CLEAR_BIT(Parking_Space_STATUS, (1<<Parking_Space_AUTO));
 //							prepare_ACK();	// т.к. массив один для всех исходящих пакетов, то после отправки сообщения на табло надо снова пересобрать ACK
 
@@ -715,9 +717,9 @@ void prepare_ACK (uint8_t *route, uint8_t cmd, uint8_t prm)
 	tx_pack[BYTE_SENDER_ADR] =				adr_in_uart_1;					//	собственный адрес в сети uart_1
 	tx_pack[BYTE_COUNT_PACK] =				pack_for_me_from_uart_1[BYTE_COUNT_PACK];	//	номер пакета (по версии PC)
 
-	tx_pack[BYTE_FLAGS] =						0;								//	обнулим байт флагов
-	SET_BIT(tx_pack[BYTE_FLAGS],(1<<CMD_FLAGS_PACK));									//	ставим флаг "пакет"
-	SET_BIT(tx_pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG));								//	ставим флаг "ACK"		(далее по этому флагу проверяем надо ли отправлять пакет или нет)
+	tx_pack[BYTE_FLAGS] =					0;								//	обнулим байт флагов
+	SET_BIT(tx_pack[BYTE_FLAGS],(1<<CMD_FLAGS_PACK));						//	ставим флаг "пакет"
+	SET_BIT(tx_pack[BYTE_FLAGS],(1<<CMD_FLAGS_ACK_FLAG));					//	ставим флаг "ACK"		(далее по этому флагу проверяем надо ли отправлять пакет или нет)
 
 	tx_pack[BYTE_COMMAND] =					cmd;							//	записываем команду на которую отвечаем	(по команде вроде ПК определяет пакет) (надо дописать в обработчике ПК)
 	tx_pack[BYTE_PARAMETER] =				prm;							//	записываем параметр команды - Ошибка (на случай если не сможем обработать)
